@@ -72,6 +72,17 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 
 Both respect `prefers-reduced-motion` (no animation; the end state is shown). Considered and dropped: name settling in, living pine dot, bookshelf spines.
 
+## Type hierarchy
+
+| Level | Role | Style |
+|---|---|---|
+| 1 | One per page: homepage sentence, page title, post title | Schibsted Grotesk 800, large |
+| 2 | List items: post, project and book titles; prose subheads | Schibsted Grotesk 600, 1.375rem |
+| 3 | Reading text | IBM Plex Sans 400, 17px |
+| Margin | Context only: section names, week labels, dates | IBM Plex Sans 500, 15px; numbers in Plex Mono |
+
+The wordmark stays Schibsted 800 (it's the logo). Book titles in running text are italic. Pull quotes are italic with a pine rule, never larger than a subhead.
+
 ## Ideas for later
 
 - **Handwritten margins:** margin notes, photo captions and week labels in Magnus's own handwriting (scanned and turned into a font), like annotations in a notebook. Fits the margin column and the "honest" value

@@ -40,7 +40,7 @@
   --t-small: 0.8125rem;
   --t-body: 1.0625rem;
   --t-lead: 1.4167rem;
-  --t-title: 1.5rem;
+  --t-title: 1.375rem;   /* level 2: list items, prose subheads */
   --t-h1: clamp(2.25rem, 1.5rem + 3vw, 3.36rem);
   --t-numeral: clamp(9rem, 3rem + 30vw, 23rem);
 
@@ -99,9 +99,14 @@ body::after {
 @media print { body::after { display: none; } }
 img { max-width: 100%; height: auto; display: block; }
 
+/* Hierarchy
+   1  one per page: homepage sentence, page title, post title. Schibsted 800, large.
+   2  list items: post/project/book titles. Schibsted 600, one step above body.
+   3  reading text: Plex Sans 400.
+   margin: context only, always quiet: Plex Sans 500 small, numbers in Plex Mono. */
 h1, h2, h3 {
   font-family: var(--f-display);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: var(--track);
   line-height: 1.1;
   text-wrap: balance;
@@ -139,8 +144,8 @@ a:hover { text-decoration-thickness: 3px; }
 .row > .margin { min-width: 0; display: grid; gap: 0.15rem; padding-top: 0.3rem; }
 .row > .column { min-width: 0; }
 .margin-title {
-  font-family: var(--f-display); font-weight: 700; font-size: var(--t-body);
-  letter-spacing: var(--track); line-height: 1.3; text-decoration: none;
+  font-family: var(--f-text); font-weight: 500; font-size: 0.9375rem;
+  letter-spacing: 0; line-height: 1.4; text-decoration: none; color: var(--ink);
 }
 a.margin-title:hover { text-decoration: underline; text-decoration-color: var(--pine); }
 @media (max-width: 52rem) {
@@ -154,15 +159,11 @@ a.margin-title:hover { text-decoration: underline; text-decoration-color: var(--
 /* Long-form text (Markdoc output wraps itself in an <article>) */
 .prose { display: grid; gap: 1.1em; }
 .prose > article { display: contents; }
-.prose h2 { font-size: var(--t-title); margin-top: 1.1em; }
-.prose h3 { font-size: var(--t-body); margin-top: 0.8em; }
-.prose ul, .prose ol { margin: 0; padding-left: 1.2em; display: grid; gap: 0.4em; }
-.prose li::marker { color: var(--muted); }
+.prose h2 { font-size: var(--t-title); margin-top: 1.4em; }
 .prose blockquote {
-  margin: 0.4em 0; font-family: var(--f-display); font-weight: 600; font-size: var(--t-lead);
-  letter-spacing: var(--track); line-height: 1.3;
+  margin: 0.3em 0; padding-left: 1.25rem; border-left: 2px solid var(--pine);
+  font-style: italic; font-size: 1.25rem; line-height: 1.5;
 }
-.prose blockquote p { text-wrap: balance; }
 .prose code { font-family: var(--f-num); font-size: 0.9em; background: var(--paper-deep); padding: 0.1em 0.3em; }
 .prose pre { overflow-x: auto; background: var(--paper-deep); padding: 1em; font-size: 0.875rem; }
 .prose pre code { background: none; padding: 0; }
