@@ -49,6 +49,11 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 | **Type** | Characterful display | One distinctive headline face that *is* the identity, paired with a quiet, very readable text face |
 | **Motion** | A few signature moments | Mostly still. One or two memorable interactions (e.g. the homepage name/intro, the language switch, or page transitions). Everything else stays calm |
 
+**Decided so far (round 3 of the type/colour review):**
+- **Colour:** Pine. Light: paper `#EEF0EB`, ink `#121614`, accent `#1F6B47`, muted `#66706B`. Dark: paper `#101411`, ink `#E5EAE6`, accent `#62C795`, muted `#8E9893`
+- **Text:** IBM Plex Sans for body copy, IBM Plex Mono for dates, navigation and labels
+- **Headline:** a characterful grotesk with letter spacing around `+0.05rem`. Bricolage Grotesque is the favourite so far; similar faces are being compared
+
 **Tension to keep in balance:** the calm editorial layout and the characterful display face pull in different directions. Use the display face loudly in a few places (name, section titles) and keep everything else quiet.
 
 ## Technical direction
@@ -66,7 +71,7 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 
 ## Open questions (for later)
 
-- Which accent colour and which display typeface. Next step: a few type + colour pairings to choose between
+- Final headline grotesk (Bricolage Grotesque or a similar face)
 - Should the existing personal design system be reused, or should the "new me" get a fresh visual identity?
 - Which signature moment(s) to build first
 - Newsletter provider and whether it sends automatically from new posts
