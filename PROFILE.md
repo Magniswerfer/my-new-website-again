@@ -59,7 +59,9 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 ## Layout (after the "less AI" pass)
 
 - **Weekly notebook:** every page has a left margin column for context (week numbers, dates, section names, the reading line) and a ~42rem reading column. Left aligned; the right side of wide screens stays open
-- **Hero:** the ISO week number of the latest Now update, set huge in Schibsted Grotesk, followed by one "This week…" sentence (edited on the Now page). Danes date things by week number, and it honestly shows how fresh the site is
+- **Hero:** the "This week…" sentence (edited on the Now page) as the big headline. The margin says "Week 46, 2026": the ISO week of the latest Now update, since Danes date things by week number
+- **Weeks grid (flair):** the year as 52 small squares under the hero label (and on the Writing page). Weeks with a post or photo are pine and link to it; this week breathes; a nod to *Four Thousand Weeks*
+- **Print texture (flair):** a fine fixed paper grain over the page, and every pine mark printed twice, the second pass a pixel off, like a risograph
 - **Pine** only on underlines, rules and the reading line. **Plex Mono** only for numbers in the margin
 - **Avoided on purpose:** all-caps labels, an accent-coloured word in headlines, `→` on links, dot-joined meta strings, rounded cards
 
@@ -69,6 +71,10 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 2. **Reading line**: on essays and long notes, a thin pine line with a dot at its tip draws down the margin as you read
 
 Both respect `prefers-reduced-motion` (no animation; the end state is shown). Considered and dropped: name settling in, living pine dot, bookshelf spines.
+
+## Ideas for later
+
+- **Handwritten margins:** margin notes, photo captions and week labels in Magnus's own handwriting (scanned and turned into a font), like annotations in a notebook. Fits the margin column and the "honest" value
 
 ## Technical direction
 

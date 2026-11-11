@@ -1,0 +1,78 @@
+---
+/**
+ * The year as a grid of ISO weeks (a nod to Four Thousand Weeks).
+ * Weeks with something published are pine and link to it; this week
+ * breathes; past empty weeks are faint; future weeks are outlined.
+ */
+import { getCollection } from 'astro:content';
+import { isoWeek, url, type Lang } from '~/i18n';
+
+interface Props { lang: Lang; today?: Date }
+const { lang, today = new Date() } = Astro.props;
+const { week: thisWeek, year } = isoWeek(today);
+const weeksInYear = isoWeek(new Date(Date.UTC(year, 11, 28))).week;
+
+type Mark = { title: string; href: string };
+const marks = new Map<number, Mark[]>();
+const add = (date: Date, mark: Mark) => {
+  const w = isoWeek(date);
+  if (w.year !== year) return;
+  marks.set(w.week, [...(marks.get(w.week) ?? []), mark]);
+};
+
+const posts = await getCollection('posts', ({ data }) => !data.draft && data.lang === lang);
+for (const p of posts) add(p.data.date, { title: p.data.title, href: url(lang, 'writing', p.id) });
+const photos = await getCollection('photos');
+for (const p of photos) {
+  add(p.data.date, { title: (lang === 'da' ? p.data.captionDa : p.data.captionEn) ?? p.data.title, href: url(lang, 'photos') + '#' + p.id });
+}
+
+const label = lang === 'da' ? 'Uge' : 'Week';
+const cells = Array.from({ length: weeksInYear }, (_, i) => {
+  const week = i + 1;
+  const items = marks.get(week) ?? [];
+  const state = week === thisWeek ? 'now' : week > thisWeek ? 'future' : items.length ? 'made' : 'past';
+  const title = `${label} ${week}${items.length ? ': ' + items.map((m) => m.title).join(', ') : ''}`;
+  return { week, state, title, href: items[0]?.href, made: items.length > 0 };
+});
+const madeCount = cells.filter((c) => c.made).length;
+const summary = lang === 'da'
+  ? `${year}: noget nyt i ${madeCount} af ${thisWeek} uger indtil nu`
+  : `${year}: something new in ${madeCount} of ${thisWeek} weeks so far`;
+---
+
+<figure class="weeks" aria-label={summary}>
+  <ol>
+    {cells.map((c) => (
+      <li class={c.state} data-made={c.made ? '' : undefined}>
+        {c.href
+          ? <a href={c.href} title={c.title} aria-label={c.title}></a>
+          : <span title={c.title}></span>}
+      </li>
+    ))}
+  </ol>
+  <figcaption class="num">{summary}</figcaption>
+</figure>
+
+<style>
+  .weeks { margin: 0; display: grid; gap: 0.6rem; }
+  ol {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(13, 0.75rem); gap: 3px;
+  }
+  li { width: 0.75rem; height: 0.75rem; position: relative; }
+  li > * { position: absolute; inset: 0; display: block; }
+  .past > * { background: color-mix(in srgb, var(--rule) 60%, transparent); }
+  .future > * { box-shadow: inset 0 0 0 1px var(--rule); }
+  [data-made] > * { background: var(--pine); box-shadow: 1px 1px 0 var(--pine-ghost); }
+  [data-made] > a:hover, [data-made] > a:focus-visible { background: var(--ink); }
+  .now > * { box-shadow: inset 0 0 0 2px var(--ink); }
+  .now[data-made] > * { background: var(--pine); box-shadow: inset 0 0 0 2px var(--ink); }
+  .now::after {
+    content: ''; position: absolute; inset: -3px; border: 1.5px solid var(--pine);
+    animation: breathe 3.6s ease-in-out infinite; pointer-events: none;
+  }
+  @keyframes breathe { 0%, 100% { opacity: 0; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .now::after { animation: none; opacity: 1; } }
+  figcaption { font-size: 0.75rem; max-width: 13rem; line-height: 1.4; }
+</style>

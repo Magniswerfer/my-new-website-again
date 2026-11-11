@@ -22,7 +22,7 @@ const { margin, title, ruleName, readingLine = false } = Astro.props;
   </div>
   <div class="column">
     <h1>{title}</h1>
-    <div class="rule" transition:name={ruleName}></div>
+    <div class="rule offprint" transition:name={ruleName}></div>
     <div class="prose"><slot /></div>
     <slot name="after" />
   </div>

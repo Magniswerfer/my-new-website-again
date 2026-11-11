@@ -35,7 +35,7 @@ const rows = items.map((item) => {
       <div class="column">
         <a href={item.href}>
           {item.title}
-          <span class="ul" aria-hidden="true" transition:name={ruleName(collection, item.id)}></span>
+          <span class="ul offprint" aria-hidden="true" transition:name={ruleName(collection, item.id)}></span>
         </a>
         {showSummary && item.summary && <p>{item.summary}</p>}
       </div>
