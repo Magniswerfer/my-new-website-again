@@ -17,21 +17,21 @@ const ui = {
     'nav.skip': 'Skip to content',
     'lang.switch': 'Dansk',
     'lang.switchLabel': 'Læs på dansk',
-    'home.hero': 'Starting over, <em>on purpose.</em>',
-    'home.intro': "I'm Magnus. This is where I write, make things and keep notes on what changes. Updated most weeks.",
-    'home.latest': 'Latest writing',
+    'home.week': 'Week',
+    'home.intro': "I'm Magnus. I'm starting over, and I write here most weeks about that, and about what I make and read along the way.",
+    'home.latest': 'Writing',
     'home.allWriting': 'All writing',
     'home.projects': 'Projects',
     'home.allProjects': 'All projects',
-    'home.now': 'Now',
-    'home.photos': 'Recently seen',
+    'home.now': 'More on the Now page',
+    'home.photos': 'Photos',
     'home.allPhotos': 'All photos',
     'home.reading': 'Reading',
     'post.back': 'Writing',
     'post.essay': 'Essay',
     'post.note': 'Note',
-    'post.min': 'min',
-    'post.alsoIn': 'Also in Danish',
+    'post.min': 'min read',
+    'post.alsoIn': 'Read this in Danish',
     'post.onlyIn': 'This piece is only in English.',
     'project.back': 'Projects',
     'project.visit': 'Visit project',
@@ -43,7 +43,7 @@ const ui = {
     'photos.intro': 'A visual diary.',
     'books.title': 'Bookshelf',
     'books.intro': "Books, music and films I'm spending time with.",
-    'books.current': 'Currently',
+    'books.current': 'Reading now',
     'books.finished': 'Finished',
     'books.next': 'Up next',
     'now.updated': 'Updated',
@@ -64,6 +64,11 @@ const ui = {
     'footer.emailLabel': 'Email address',
     'footer.subscribe': 'Subscribe',
     'footer.rss': 'RSS feed',
+    'footer.write': 'Write to me at',
+    'footer.orForm': 'or use the',
+    'footer.form': 'contact form',
+    'footer.follow2': 'Follow new writing by',
+    'now.thisWeek': 'This week',
     'notfound.title': 'This page has moved on',
     'notfound.body': "There's nothing at this address. Try the homepage or the writing archive.",
   },
@@ -79,21 +84,21 @@ const ui = {
     'nav.skip': 'Gå til indhold',
     'lang.switch': 'English',
     'lang.switchLabel': 'Read in English',
-    'home.hero': 'At starte forfra, <em>med vilje.</em>',
-    'home.intro': 'Jeg er Magnus. Her skriver jeg, laver ting og holder styr på, hvad der ændrer sig. Opdateres de fleste uger.',
-    'home.latest': 'Senest skrevet',
+    'home.week': 'Uge',
+    'home.intro': 'Jeg er Magnus. Jeg er ved at starte forfra, og jeg skriver her de fleste uger om det, og om det jeg laver og læser undervejs.',
+    'home.latest': 'Skrivning',
     'home.allWriting': 'Alt skrevet',
     'home.projects': 'Projekter',
     'home.allProjects': 'Alle projekter',
-    'home.now': 'Nu',
-    'home.photos': 'Set for nylig',
+    'home.now': 'Mere på Nu-siden',
+    'home.photos': 'Fotos',
     'home.allPhotos': 'Alle fotos',
     'home.reading': 'Læser',
     'post.back': 'Skrivning',
     'post.essay': 'Essay',
     'post.note': 'Note',
-    'post.min': 'min',
-    'post.alsoIn': 'Også på engelsk',
+    'post.min': 'min læsning',
+    'post.alsoIn': 'Læs den på engelsk',
     'post.onlyIn': 'Denne tekst findes kun på dansk.',
     'project.back': 'Projekter',
     'project.visit': 'Besøg projektet',
@@ -105,7 +110,7 @@ const ui = {
     'photos.intro': 'En visuel dagbog.',
     'books.title': 'Bogreol',
     'books.intro': 'Bøger, musik og film, jeg bruger tid på.',
-    'books.current': 'Lige nu',
+    'books.current': 'Læser nu',
     'books.finished': 'Færdig',
     'books.next': 'Næste',
     'now.updated': 'Opdateret',
@@ -126,6 +131,11 @@ const ui = {
     'footer.emailLabel': 'E-mailadresse',
     'footer.subscribe': 'Tilmeld',
     'footer.rss': 'RSS-feed',
+    'footer.write': 'Skriv til mig på',
+    'footer.orForm': 'eller brug',
+    'footer.form': 'kontaktformularen',
+    'footer.follow2': 'Følg nye tekster via',
+    'now.thisWeek': 'Denne uge',
     'notfound.title': 'Denne side er gået videre',
     'notfound.body': 'Der er intet på denne adresse. Prøv forsiden eller arkivet.',
   },
@@ -148,5 +158,16 @@ export const formatDate = (lang: Lang, date: Date, style: 'long' | 'short' = 'lo
     timeZone: 'UTC',
   });
 
-/** ISO date used in lists, set in Plex Mono: 2026-11-04 */
+/** ISO date, used for <time datetime>. */
 export const isoDate = (date: Date) => date.toISOString().slice(0, 10);
+
+/** ISO 8601 week number, the way Danes date things ("uge 46"). */
+export function isoWeek(date: Date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = Date.UTC(d.getUTCFullYear(), 0, 1);
+  return { week: Math.ceil(((d.valueOf() - yearStart) / 86400000 + 1) / 7), year: d.getUTCFullYear() };
+}
+
+export const weekLabel = (lang: Lang, date: Date) => `${lang === 'da' ? 'Uge' : 'Week'} ${isoWeek(date).week}`;

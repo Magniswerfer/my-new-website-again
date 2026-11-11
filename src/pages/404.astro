@@ -6,11 +6,10 @@ import { t, url } from '~/i18n';
 
 <Base lang="en" title="Not found" alternate="/da/">
   <PageHead title={t('en', 'notfound.title')} intro={t('en', 'notfound.body')} />
-  <p class="mono links">
-    <a href={url('en')}>Home</a> · <a href={url('en', 'writing')}>Writing</a> · <a href={url('da')} lang="da">Dansk</a>
-  </p>
+  <div class="row">
+    <div class="margin"></div>
+    <p class="column">
+      Go to the <a href={url('en')}>homepage</a>, the <a href={url('en', 'writing')}>writing archive</a>, or <a href={url('da')} lang="da">den danske forside</a>.
+    </p>
+  </div>
 </Base>
-
-<style>
-  .links { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-</style>

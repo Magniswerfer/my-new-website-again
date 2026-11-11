@@ -9,5 +9,5 @@ const lang = Astro.params.lang as Lang;
 
 <Base lang={lang} title={t(lang, 'contact.sentTitle')}>
   <PageHead title={t(lang, 'contact.sentTitle')} intro={t(lang, 'contact.sentBody')} />
-  <p class="mono"><a href={url(lang)}>{t(lang, 'contact.back')}</a></p>
+  <div class="row"><div class="margin"></div><p class="column"><a href={url(lang)}>{t(lang, 'contact.back')}</a></p></div>
 </Base>

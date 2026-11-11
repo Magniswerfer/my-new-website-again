@@ -15,14 +15,21 @@ const translationKey = fields.text({
     'Give the English and Danish versions of the same piece the same key (e.g. "first-month"). Leave empty if it only exists in one language.',
 });
 
-const pageSingleton = (label: string, path: string) =>
+const pageSingleton = (label: string, path: string, withWeek = false) =>
   singleton({
     label,
     path,
     format: { contentField: 'content' },
     schema: {
       title: fields.text({ label: 'Title' }),
-      updated: fields.date({ label: 'Last updated', defaultValue: { kind: 'today' } }),
+      updated: fields.date({
+        label: 'Last updated',
+        description: withWeek ? 'The homepage shows the week number of this date, so update it when you edit.' : undefined,
+        defaultValue: { kind: 'today' },
+      }),
+      ...(withWeek
+        ? { thisWeek: fields.text({ label: 'This week (one sentence for the homepage)', multiline: true }) }
+        : {}),
       content: fields.markdoc({ label: 'Content' }),
     },
   });
@@ -147,8 +154,8 @@ export default config({
   singletons: {
     aboutEn: pageSingleton('About (English)', 'src/content/pages/about-en'),
     aboutDa: pageSingleton('Om (Dansk)', 'src/content/pages/about-da'),
-    nowEn: pageSingleton('Now (English)', 'src/content/pages/now-en'),
-    nowDa: pageSingleton('Nu (Dansk)', 'src/content/pages/now-da'),
+    nowEn: pageSingleton('Now (English)', 'src/content/pages/now-en', true),
+    nowDa: pageSingleton('Nu (Dansk)', 'src/content/pages/now-da', true),
     settings: singleton({
       label: 'Site settings',
       path: 'src/content/settings/site',

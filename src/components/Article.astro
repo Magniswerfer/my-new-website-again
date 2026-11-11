@@ -1,27 +1,26 @@
 ---
 /**
- * Shared layout for a post or project page: back link, meta line, title,
- * the pine heading rule (target of the underline → heading transition),
- * then the body. Essays also get the reading line.
+ * Post/project layout on the margin/column grid. The margin holds the
+ * context (kind, week, date, reading time) and, on essays, the reading
+ * line. The title's pine rule is the target of the underline transition.
  */
 import ReadingLine from './ReadingLine.astro';
 
 interface Props {
-  backHref: string;
-  backLabel: string;
-  meta: string;
+  margin: string[];
   title: string;
   ruleName: string;
   readingLine?: boolean;
 }
-const { backHref, backLabel, meta, title, ruleName, readingLine = false } = Astro.props;
+const { margin, title, ruleName, readingLine = false } = Astro.props;
 ---
 
-<article class:list={['article', { reading: readingLine }]} data-reading={readingLine ? '' : undefined}>
-  {readingLine && <ReadingLine />}
-  <div class="col">
-    <a class="back mono" href={backHref}>← {backLabel}</a>
-    <p class="mono meta">{meta}</p>
+<article class="row article" data-reading={readingLine ? '' : undefined}>
+  <div class="margin">
+    {margin.map((line, i) => <span class:list={[i === 0 ? 'margin-title' : 'num']}>{line}</span>)}
+    {readingLine && <ReadingLine />}
+  </div>
+  <div class="column">
     <h1>{title}</h1>
     <div class="rule" transition:name={ruleName}></div>
     <div class="prose"><slot /></div>
@@ -30,13 +29,7 @@ const { backHref, backLabel, meta, title, ruleName, readingLine = false } = Astr
 </article>
 
 <style>
-  .article { display: grid; grid-template-columns: minmax(0, 1fr); }
-  .article.reading { grid-template-columns: 2.25rem minmax(0, 1fr); column-gap: clamp(0.25rem, 2vw, 1.5rem); margin-left: -0.5rem; }
-  .col { display: grid; gap: 0; min-width: 0; max-width: 46rem; }
-  .back { text-decoration: none; justify-self: start; }
-  .back:hover { color: var(--pine); }
-  .meta { margin-top: 1.75rem; }
-  h1 { margin-top: 0.5rem; font-size: var(--step-3); }
-  .rule { height: 3px; background: var(--pine); margin: 1.4rem 0 2rem; }
-  @media (max-width: 30rem) { .article.reading { grid-template-columns: 1rem minmax(0, 1fr); margin-left: -0.25rem; } }
+  .article { padding-top: clamp(1rem, 4vw, 3rem); }
+  .article > .margin { align-self: stretch; align-content: start; padding-top: 0.55rem; }
+  .rule { height: 3px; background: var(--pine); margin: 1.5rem 0 2.25rem; }
 </style>

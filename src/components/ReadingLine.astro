@@ -11,7 +11,11 @@
 </div>
 
 <style>
-  .reading-line { position: sticky; top: 22vh; height: 56vh; width: 9px; justify-self: center; }
+  /* Sits in the article's margin column, under the meta lines. */
+  .reading-line { position: sticky; top: 20vh; height: 60vh; width: 9px; margin-top: 2rem; }
+  @media (max-width: 52rem) {
+    .reading-line { position: fixed; top: 20vh; left: max(4px, env(safe-area-inset-left, 0px)); margin: 0; z-index: 2; }
+  }
   .track { position: absolute; inset: 0; left: 3.5px; width: 2px; background: var(--rule); border-radius: 2px; }
   .fill { position: absolute; inset: 0; background: var(--pine); transform-origin: top; transform: scaleY(var(--p, 0)); border-radius: 2px; }
   .tip {
@@ -33,7 +37,7 @@
     const update = () => {
       frame = 0;
       const rect = article.getBoundingClientRect();
-      const start = window.innerHeight * 0.22; // where the line itself sits
+      const start = window.innerHeight * 0.2; // where the line itself sits
       const total = rect.height - window.innerHeight * 0.5;
       const p = total > 0 ? Math.min(1, Math.max(0, (start - rect.top) / total)) : 1;
       line.style.setProperty('--p', p.toFixed(4));

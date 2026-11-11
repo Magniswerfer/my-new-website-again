@@ -2,7 +2,7 @@
 import { Image } from 'astro:assets';
 import Base from '~/layouts/Base.astro';
 import PageHead from '~/components/PageHead.astro';
-import { t, langPaths, formatDate, type Lang } from '~/i18n';
+import { t, langPaths, formatDate, weekLabel, type Lang } from '~/i18n';
 import { getPhotos } from '~/lib/content';
 
 export const getStaticPaths = langPaths;
@@ -12,16 +12,20 @@ const photos = await getPhotos();
 
 <Base lang={lang} title={t(lang, 'photos.title')} current="photos">
   <PageHead title={t(lang, 'photos.title')} intro={t(lang, 'photos.intro')} />
-  <div class="grid">
+  <div class="diary">
     {photos.map((p) => {
       const caption = lang === 'da' ? p.data.captionDa : p.data.captionEn;
       return (
-        <figure id={p.id}>
-          <Image src={p.data.image} alt={caption ?? p.data.title} widths={[480, 960, 1440]} sizes="(max-width: 40rem) 100vw, 50vw" />
-          <figcaption>
-            {caption && <span>{caption}</span>}
-            <span class="mono">{[p.data.place, formatDate(lang, p.data.date, 'short')].filter(Boolean).join(' · ')}</span>
-          </figcaption>
+        <figure class="row" id={p.id}>
+          <div class="margin">
+            <span class="margin-title">{weekLabel(lang, p.data.date)}</span>
+            {p.data.place && <span class="muted place">{p.data.place}</span>}
+            <time class="num" datetime={p.data.date.toISOString()}>{formatDate(lang, p.data.date, 'short')}</time>
+          </div>
+          <div class="column">
+            <Image src={p.data.image} alt={caption ?? p.data.title} widths={[480, 960, 1440]} sizes="(max-width: 52rem) 100vw, 42rem" />
+            {caption && <figcaption>{caption}</figcaption>}
+          </div>
         </figure>
       );
     })}
@@ -29,9 +33,10 @@ const photos = await getPhotos();
 </Base>
 
 <style>
-  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(var(--space) * 1.25) var(--space); }
-  @media (max-width: 40rem) { .grid { grid-template-columns: minmax(0, 1fr); } }
-  figure { margin: 0; display: grid; gap: 0.6rem; scroll-margin-top: 2rem; }
-  figure img { width: 100%; border-radius: 6px; background: var(--surface); }
-  figcaption { display: grid; gap: 0.15rem; font-size: 0.95rem; }
+  .diary { display: grid; gap: var(--block); }
+  figure { margin: 0; scroll-margin-top: 2rem; }
+  .column { display: grid; gap: 0.75rem; }
+  img { width: 100%; background: var(--paper-deep); }
+  figcaption { font-size: 0.95rem; }
+  .place { font-size: 0.95rem; }
 </style>

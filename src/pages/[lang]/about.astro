@@ -13,5 +13,8 @@ const { Content } = page ? await render(page) : { Content: null };
 
 <Base lang={lang} title={page?.data.title ?? t(lang, 'nav.about')} current="about">
   <PageHead title={page?.data.title ?? t(lang, 'nav.about')} />
-  <div class="prose">{Content && <Content />}</div>
+  <div class="row">
+    <div class="margin"></div>
+    <div class="column prose">{Content && <Content />}</div>
+  </div>
 </Base>

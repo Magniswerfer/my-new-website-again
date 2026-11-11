@@ -66,6 +66,7 @@ const pages = defineCollection({
   schema: z.object({
     title: z.string(),
     updated: z.coerce.date().optional().nullable(),
+    thisWeek: optionalText,
   }),
 });
 

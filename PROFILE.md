@@ -56,6 +56,13 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 
 **Tension to keep in balance:** the calm editorial layout and the characterful display face pull in different directions. Use the display face loudly in a few places (name, section titles) and keep everything else quiet.
 
+## Layout (after the "less AI" pass)
+
+- **Weekly notebook:** every page has a left margin column for context (week numbers, dates, section names, the reading line) and a ~42rem reading column. Left aligned; the right side of wide screens stays open
+- **Hero:** the ISO week number of the latest Now update, set huge in Schibsted Grotesk, followed by one "This week…" sentence (edited on the Now page). Danes date things by week number, and it honestly shows how fresh the site is
+- **Pine** only on underlines, rules and the reading line. **Plex Mono** only for numbers in the margin
+- **Avoided on purpose:** all-caps labels, an accent-coloured word in headlines, `→` on links, dot-joined meta strings, rounded cards
+
 ## Signature moments (launch)
 
 1. **Underline → heading**: when a post link is clicked, its pine underline lifts off and stretches into the rule under the post title. Going back reverses it. Built with the View Transitions API (Astro `<ClientRouter />`), with a plain page load as fallback

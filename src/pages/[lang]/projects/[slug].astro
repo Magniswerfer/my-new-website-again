@@ -19,19 +19,19 @@ const alternate = translation ? url(translation.data.lang, 'projects', translati
 
 <Base lang={lang} title={project.data.title} description={project.data.summary} alternate={alternate} current="projects">
   <Article
-    backHref={url(lang, 'projects')}
-    backLabel={t(lang, 'project.back')}
-    meta={[String(project.data.year), project.data.summary].filter(Boolean).join(' · ')}
+    margin={[t(lang, 'projects.title').replace(/er$|s$/, ''), String(project.data.year)]}
     title={project.data.title}
     ruleName={ruleName('projects', project.id)}
   >
+    {project.data.summary && <p class="summary">{project.data.summary}</p>}
     <Content />
     {project.data.link && (
-      <p slot="after" class="visit"><a href={project.data.link}>{t(lang, 'project.visit')} ↗</a></p>
+      <p slot="after" class="visit"><a href={project.data.link}>{t(lang, 'project.visit')}</a></p>
     )}
   </Article>
 </Base>
 
 <style>
-  .visit { margin-top: var(--space); font-family: var(--f-mono); font-size: var(--step--1); }
+  .summary { font-size: var(--t-lead); line-height: 1.4; }
+  .visit { margin-top: 2.5rem; font-weight: 600; }
 </style>

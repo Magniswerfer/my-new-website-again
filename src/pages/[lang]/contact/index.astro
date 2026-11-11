@@ -13,6 +13,9 @@ const settings = await getSettings();
 <Base lang={lang} title={t(lang, 'contact.title')}>
   <PageHead title={t(lang, 'contact.title')} intro={t(lang, 'contact.intro')} />
 
+  <div class="row">
+  <div class="margin"></div>
+  <div class="column">
   <p class="error" role="alert" hidden data-contact-error>{t(lang, 'contact.error')}</p>
 
   <form method="post" action="/api/contact" class="form">
@@ -43,8 +46,10 @@ const settings = await getSettings();
   </form>
 
   {settings.email && (
-    <p class="alt mono">{t(lang, 'contact.or')} <a href={`mailto:${settings.email}`}>{settings.email}</a></p>
+    <p class="alt">{t(lang, 'contact.or')} <a href={`mailto:${settings.email}`}>{settings.email}</a>.</p>
   )}
+  </div>
+  </div>
 </Base>
 
 <script>
@@ -57,19 +62,19 @@ const settings = await getSettings();
 <style>
   .form { display: grid; gap: 1.1rem; max-width: 36rem; }
   .field { display: grid; gap: 0.35rem; }
-  label { font-family: var(--f-mono); font-size: var(--step--1); color: var(--muted); }
+  label { font-weight: 600; font-size: 0.95rem; }
   input, textarea {
-    font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--rule);
-    border-radius: 8px; padding: 0.7rem 0.85rem; width: 100%;
+    font: inherit; color: var(--ink); background: var(--paper-deep); border: 0;
+    border-bottom: 1.5px solid var(--ink); padding: 0.65rem 0.75rem; width: 100%; border-radius: 0;
   }
-  input:focus, textarea:focus { border-color: var(--pine); outline: none; box-shadow: 0 0 0 3px var(--selection); }
+  input:focus, textarea:focus { border-bottom-color: var(--pine); outline: 2px solid var(--pine); outline-offset: 0; }
   textarea { resize: vertical; }
   button {
-    justify-self: start; font: 500 0.95rem/1 var(--f-text); color: var(--paper); background: var(--ink);
-    border: 0; border-radius: 999px; padding: 0.85rem 1.4rem; cursor: pointer;
+    justify-self: start; font: 600 1rem/1 var(--f-text); color: var(--paper); background: var(--ink);
+    border: 0; padding: 0.9rem 1.4rem; cursor: pointer;
   }
   button:hover { background: var(--pine); }
   .hp { position: absolute; left: -9999px; }
-  .error { max-width: 36rem; margin-bottom: 1.25rem; padding: 0.8rem 1rem; border-left: 3px solid var(--pine); background: var(--surface); }
-  .alt { margin-top: calc(var(--space) * 1.25); }
+  .error { max-width: 36rem; margin-bottom: 1.5rem; padding: 0.8rem 1rem; border-left: 3px solid var(--pine); background: var(--paper-deep); }
+  .alt { margin-top: 2.5rem; color: var(--muted); }
 </style>

@@ -1,22 +1,38 @@
 ---
 /**
- * A list of dated links. Each link's pine underline carries a
- * view-transition-name that matches the heading rule on the target page,
- * so clicking it morphs the underline into that rule (signature moment 1).
+ * Dated entries on the margin/column grid. The week number sits in the
+ * margin (with the year when it changes). Each title's pine underline
+ * carries a view-transition-name that matches the heading rule on the
+ * target page, so clicking morphs the underline into the rule.
  */
-import { isoDate } from '~/i18n';
+import { isoDate, isoWeek, weekLabel, type Lang } from '~/i18n';
 import { ruleName } from '~/lib/content';
 
-interface Item { id: string; href: string; title: string; date?: Date; meta?: string; summary?: string }
-interface Props { items: Item[]; collection: 'posts' | 'projects'; showSummary?: boolean }
-const { items, collection, showSummary = false } = Astro.props;
+interface Item { id: string; href: string; title: string; date?: Date; year?: number; summary?: string }
+interface Heading { id: string; label: string; href: string }
+interface Props { items: Item[]; collection: 'posts' | 'projects'; lang: Lang; showSummary?: boolean; showYear?: boolean; heading?: Heading }
+const { items, collection, lang, showSummary = false, showYear = false, heading } = Astro.props;
+
+let lastYear: number | undefined;
+const rows = items.map((item) => {
+  const year = item.date ? isoWeek(item.date).year : item.year;
+  const yearChanged = showYear && year !== lastYear;
+  lastYear = year;
+  return { ...item, yearLabel: yearChanged ? year : undefined };
+});
 ---
 
 <ol class="entries">
-  {items.map((item) => (
-    <li>
-      <span class="meta mono">{item.date ? <time datetime={item.date.toISOString()}>{isoDate(item.date)}</time> : item.meta}</span>
-      <div class="main">
+  {rows.map((item, i) => (
+    <li class:list={['row', { 'has-heading': heading && i === 0 }]}>
+      <div class="margin">
+        {heading && i === 0 && <a id={heading.id} class="margin-title heading" href={heading.href}>{heading.label}</a>}
+        {item.yearLabel && <span class="margin-title">{item.yearLabel}</span>}
+        {item.date
+          ? <time class="num" datetime={isoDate(item.date)}>{weekLabel(lang, item.date)}</time>
+          : !showYear && item.year && <span class="num">{item.year}</span>}
+      </div>
+      <div class="column">
         <a href={item.href}>
           {item.title}
           <span class="ul" aria-hidden="true" transition:name={ruleName(collection, item.id)}></span>
@@ -28,15 +44,19 @@ const { items, collection, showSummary = false } = Astro.props;
 </ol>
 
 <style>
-  .entries { list-style: none; margin: 0; padding: 0; }
-  li {
-    display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 1rem;
-    padding-block: 0.9rem; border-top: 1px solid var(--rule); align-items: baseline;
+  .entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.6rem; }
+  .column { display: grid; gap: 0.45rem; }
+  .column > a {
+    position: relative; justify-self: start; text-decoration: none;
+    font-family: var(--f-display); font-weight: 700; font-size: var(--t-title);
+    letter-spacing: var(--track); line-height: 1.2; padding-bottom: 0.3rem;
   }
-  .main { display: grid; gap: 0.3rem; min-width: 0; }
-  a { position: relative; display: inline; text-decoration: none; font-size: var(--step-0); padding-bottom: 3px; justify-self: start; }
-  .ul { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--pine); }
-  a:hover { color: var(--pine); }
-  p { color: var(--muted); font-size: 0.95rem; max-width: 56ch; }
-  @media (max-width: 30rem) { li { grid-template-columns: 1fr; gap: 0.15rem; } }
+  .ul { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--pine); transition: height 0.15s; }
+  .column > a:hover .ul { height: 4px; }
+  p { color: var(--muted); max-width: 34rem; }
+  .heading { margin-bottom: 0.35rem; }
+  @media (max-width: 52rem) {
+    .has-heading > .margin { grid-auto-flow: row !important; }
+    .heading { margin-bottom: 0.75rem; }
+  }
 </style>

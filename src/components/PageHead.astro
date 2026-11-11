@@ -3,12 +3,16 @@ interface Props { title: string; intro?: string }
 const { title, intro } = Astro.props;
 ---
 
-<header class="head">
-  <h1>{title}</h1>
-  {intro && <p class="lede">{intro}</p>}
+<header class="row head">
+  <div class="margin"><slot name="margin" /></div>
+  <div class="column">
+    <h1>{title}</h1>
+    {intro && <p class="intro">{intro}</p>}
+  </div>
 </header>
 
 <style>
-  .head { display: grid; gap: 0.9rem; padding-block: 1rem calc(var(--space) * 1.25); }
-  .lede { color: var(--muted); }
+  .head { padding-block: clamp(1rem, 4vw, 3rem) clamp(2rem, 5vw, 3.5rem); }
+  .head > .margin { padding-top: 0.8rem; }
+  .intro { margin-top: 1rem; font-size: var(--t-lead); line-height: 1.4; color: var(--muted); max-width: 32ch; }
 </style>

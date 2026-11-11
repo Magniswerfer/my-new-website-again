@@ -6,55 +6,55 @@ interface Props { lang: Lang }
 const { lang } = Astro.props;
 const settings = await getSettings();
 const year = new Date().getFullYear();
+const rss = url(lang, 'rss.xml').slice(0, -1);
 ---
 
-<footer class="wrap">
-  <div class="cols">
+<footer class="wrap row">
+  <div class="margin">
+    <p class="margin-title">{t(lang, 'footer.follow')}</p>
+  </div>
+  <div class="column">
+    <p>
+      {settings.email && <>{t(lang, 'footer.write')} <a href={`mailto:${settings.email}`}>{settings.email}</a> {t(lang, 'footer.orForm')} </>}
+      <a href={url(lang, 'contact')}>{t(lang, 'footer.form')}</a>.{' '}
+      {t(lang, 'footer.follow2')} <a href={rss}>RSS</a>{settings.links.length > 0 && <>, {lang === 'da' ? 'og jeg er også på' : 'and I’m also on'} {settings.links.map((l, i) => <>{i > 0 && (i === settings.links.length - 1 ? (lang === 'da' ? ' og ' : ' and ') : ', ')}<a href={l.url} rel="me">{l.label}</a></>)}</>}.
+    </p>
+
     {settings.buttondownUsername && (
-      <form
-        class="news"
-        action={`https://buttondown.com/api/emails/embed-subscribe/${settings.buttondownUsername}`}
-        method="post"
-        target="_blank"
-      >
-        <p class="label">{t(lang, 'footer.follow')}</p>
-        <p>{t(lang, 'footer.newsletter')}</p>
-        <div class="row">
-          <label class="visually-hidden" for="bd-email">{t(lang, 'footer.emailLabel')}</label>
-          <input id="bd-email" type="email" name="email" required autocomplete="email" placeholder={t(lang, 'footer.emailLabel')} />
+      <form action={`https://buttondown.com/api/emails/embed-subscribe/${settings.buttondownUsername}`} method="post" target="_blank">
+        <label for="bd-email">{t(lang, 'footer.newsletter')}</label>
+        <div class="field">
+          <input id="bd-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com" />
           <input type="hidden" name="tag" value={lang} />
           <button type="submit">{t(lang, 'footer.subscribe')}</button>
         </div>
       </form>
     )}
-    <div class="links">
-      <p class="label">{t(lang, 'now.elsewhere')}</p>
-      <ul>
-        {settings.links.map((l) => <li><a href={l.url} rel="me">{l.label}</a></li>)}
-        <li><a href={url(lang, 'contact')}>{t(lang, 'nav.contact')}</a></li>
-        <li><a href={url(lang, 'rss.xml').slice(0, -1)}>{t(lang, 'footer.rss')}</a></li>
-      </ul>
-    </div>
+
+    <p class="num small">© {year} Magnus H. Kaspersen</p>
   </div>
-  <p class="mono small">© {year} Magnus H. Kaspersen · magnushkaspersen.com</p>
 </footer>
 
 <style>
-  footer { border-top: 1px solid var(--rule); padding-block: var(--space) calc(var(--space) + env(safe-area-inset-bottom, 0px)); display: grid; gap: var(--space); }
-  .cols { display: flex; flex-wrap: wrap; gap: var(--space) calc(var(--space) * 2); justify-content: space-between; }
-  .news { display: grid; gap: 0.5rem; max-width: 30rem; min-width: 0; }
-  .news p:not(.label) { color: var(--muted); font-size: 0.95rem; }
-  .row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem; }
-  input[type='email'] {
-    flex: 1 1 14rem; min-width: 0; font: inherit; font-size: 0.95rem; color: var(--ink); background: var(--surface);
-    border: 1px solid var(--rule); border-radius: 999px; padding: 0.6rem 1rem;
+  footer {
+    margin-top: var(--block);
+    padding-block: 2rem calc(2.5rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--rule);
   }
+  .column { display: grid; gap: 1.25rem; }
+  .column > p:first-child { max-width: 36rem; }
+  form { display: grid; gap: 0.5rem; max-width: 30rem; }
+  label { color: var(--muted); font-size: 0.95rem; }
+  .field { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  input[type='email'] {
+    flex: 1 1 14rem; min-width: 0; font: inherit; color: var(--ink); background: transparent;
+    border: 0; border-bottom: 1.5px solid var(--ink); padding: 0.4rem 0;
+  }
+  input[type='email']:focus { outline: none; border-bottom-color: var(--pine); }
   button {
-    font: 500 0.9rem/1 var(--f-text); color: var(--paper); background: var(--ink); border: 0;
-    border-radius: 999px; padding: 0.7rem 1.2rem; cursor: pointer;
+    font: 600 0.95rem/1 var(--f-text); color: var(--paper); background: var(--ink); border: 0;
+    padding: 0.7rem 1.1rem; cursor: pointer;
   }
   button:hover { background: var(--pine); }
-  .links ul { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.25rem; }
-  .links a { font-family: var(--f-mono); font-size: var(--step--1); }
   .small { font-size: 0.75rem; }
 </style>
