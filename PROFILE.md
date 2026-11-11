@@ -56,15 +56,12 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 
 **Tension to keep in balance:** the calm editorial layout and the characterful display face pull in different directions. Use the display face loudly in a few places (name, section titles) and keep everything else quiet.
 
-## Signature moments (shortlist, being prototyped)
+## Signature moments (launch)
 
-1. **Name settles in**: on first load the name eases from tight tracking to `+0.05rem`
-2. **Living pine dot**: the dot after the name breathes slowly; hover or tap shows the current Now line
-3. **Underline → heading**: a post link's pine underline becomes the rule under the post title (View Transitions)
-4. **Reading line**: a pine line with the dot at its tip draws down the margin of essays
-5. **Bookshelf spines**: books tilt out on hover and open into a note; titles run bottom to top
+1. **Underline → heading**: when a post link is clicked, its pine underline lifts off and stretches into the rule under the post title. Going back reverses it. Built with the View Transitions API (Astro `<ClientRouter />`), with a plain page load as fallback
+2. **Reading line**: on essays and long notes, a thin pine line with a dot at its tip draws down the margin as you read
 
-Still to decide: which of these ship at launch.
+Both respect `prefers-reduced-motion` (no animation; the end state is shown). Considered and dropped: name settling in, living pine dot, bookshelf spines.
 
 ## Technical direction
 
