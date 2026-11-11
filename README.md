@@ -28,7 +28,8 @@ Open **/keystatic**. In local dev it edits the files in `src/content/`. In produ
 | Projects | `src/content/projects/*.mdoc` | Tick *Show on the homepage* to feature a project |
 | Photos | `src/content/photos/*.yaml` + `src/assets/photos/` | Optimised to WebP at build time |
 | Bookshelf & media | `src/content/books/*.yaml` | Status: currently / up next / finished |
-| About, Now (EN + DA) | `src/content/pages/*.mdoc` | Now shows on the homepage too |
+| Weeks | `src/content/weeks/*.yaml` | One sentence a week (EN + DA). The newest is the homepage headline; all of them make up the Weeks page |
+| About (EN + DA) | `src/content/pages/*.mdoc` | |
 | Site settings | `src/content/settings/site.yaml` | Email, links, Buttondown username for the newsletter |
 
 A post can exist in one language only. The page then says so, and the language switch goes to the other language's homepage section.

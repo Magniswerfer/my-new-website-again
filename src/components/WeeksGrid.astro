@@ -6,6 +6,7 @@
  */
 import { getCollection } from 'astro:content';
 import { isoWeek, url, type Lang } from '~/i18n';
+import { weekText, weekAnchor } from '~/lib/content';
 
 interface Props { lang: Lang; today?: Date }
 const { lang, today = new Date() } = Astro.props;
@@ -20,6 +21,8 @@ const add = (date: Date, mark: Mark) => {
   marks.set(w.week, [...(marks.get(w.week) ?? []), mark]);
 };
 
+const weekEntries = await getCollection('weeks');
+for (const w of weekEntries) add(w.data.date, { title: weekText(w, lang), href: url(lang, 'weeks') + '#' + weekAnchor(w.data.date) });
 const posts = await getCollection('posts', ({ data }) => !data.draft && data.lang === lang);
 for (const p of posts) add(p.data.date, { title: p.data.title, href: url(lang, 'writing', p.id) });
 const photos = await getCollection('photos');
@@ -32,7 +35,7 @@ const cells = Array.from({ length: weeksInYear }, (_, i) => {
   const week = i + 1;
   const items = marks.get(week) ?? [];
   const state = week === thisWeek ? 'now' : week > thisWeek ? 'future' : items.length ? 'made' : 'past';
-  const title = `${label} ${week}${items.length ? ': ' + items.map((m) => m.title).join(', ') : ''}`;
+  const title = `${label} ${week}${items.length ? ': ' + items.map((m) => m.title).join(' / ') : ''}`;
   return { week, state, title, href: items[0]?.href, made: items.length > 0 };
 });
 const madeCount = cells.filter((c) => c.made).length;

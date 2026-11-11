@@ -66,7 +66,16 @@ const pages = defineCollection({
   schema: z.object({
     title: z.string(),
     updated: z.coerce.date().optional().nullable(),
-    thisWeek: optionalText,
+  }),
+});
+
+const weeks = defineCollection({
+  loader: glob({ pattern: '*.yaml', base: './src/content/weeks' }),
+  schema: z.object({
+    name: z.string(),
+    date: z.coerce.date(),
+    textEn: z.string(),
+    textDa: optionalText,
   }),
 });
 
@@ -79,4 +88,4 @@ const settings = defineCollection({
   }),
 });
 
-export const collections = { posts, projects, photos, books, pages, settings };
+export const collections = { weeks, posts, projects, photos, books, pages, settings };

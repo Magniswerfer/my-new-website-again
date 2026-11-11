@@ -4,7 +4,7 @@ import Base from '~/layouts/Base.astro';
 import EntryList from '~/components/EntryList.astro';
 import WeeksGrid from '~/components/WeeksGrid.astro';
 import { t, url, langPaths, isoWeek, type Lang } from '~/i18n';
-import { getPosts, getProjects, getPhotos, getBooks, getPage } from '~/lib/content';
+import { getPosts, getProjects, getPhotos, getBooks, getWeeks, weekText } from '~/lib/content';
 
 export const getStaticPaths = langPaths;
 const lang = Astro.params.lang as Lang;
@@ -14,12 +14,11 @@ const allProjects = await getProjects(lang);
 const projects = (allProjects.some((p) => p.data.featured) ? allProjects.filter((p) => p.data.featured) : allProjects).slice(0, 3);
 const photos = (await getPhotos()).slice(0, 3);
 const reading = (await getBooks()).filter((b) => b.data.status === 'current').slice(0, 3);
-const now = await getPage('now', lang);
+const latest = (await getWeeks())[0];
 
-// The margin shows the week the Now page was last updated, so it shows
-// honestly how fresh the "This week" sentence is.
-const updated = now?.data.updated ?? new Date();
-const { week, year } = isoWeek(updated);
+// The margin shows the week of the latest week-log entry, so it says
+// honestly how fresh the headline is.
+const { week, year } = isoWeek(latest?.data.date ?? new Date());
 ---
 
 <Base lang={lang}>
@@ -32,9 +31,9 @@ const { week, year } = isoWeek(updated);
     <div class="column">
       <h1 id="this-week" class="this-week">
         <span class="visually-hidden">{t(lang, 'home.week')} {week}. </span>
-        {now?.data.thisWeek ?? t(lang, 'home.intro')}
+        {latest ? weekText(latest, lang) : t(lang, 'home.intro')}
       </h1>
-      <p class="intro">{t(lang, 'home.intro')} <a href={url(lang, 'now')}>{t(lang, 'home.now')}</a>.</p>
+      <p class="intro">{t(lang, 'home.intro')} <a href={url(lang, 'weeks')}>{t(lang, 'home.earlier')}</a>.</p>
     </div>
   </section>
 

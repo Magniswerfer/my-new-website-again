@@ -15,21 +15,14 @@ const translationKey = fields.text({
     'Give the English and Danish versions of the same piece the same key (e.g. "first-month"). Leave empty if it only exists in one language.',
 });
 
-const pageSingleton = (label: string, path: string, withWeek = false) =>
+const pageSingleton = (label: string, path: string) =>
   singleton({
     label,
     path,
     format: { contentField: 'content' },
     schema: {
       title: fields.text({ label: 'Title' }),
-      updated: fields.date({
-        label: 'Last updated',
-        description: withWeek ? 'The homepage shows the week number of this date, so update it when you edit.' : undefined,
-        defaultValue: { kind: 'today' },
-      }),
-      ...(withWeek
-        ? { thisWeek: fields.text({ label: 'This week (one sentence for the homepage)', multiline: true }) }
-        : {}),
+      updated: fields.date({ label: 'Last updated', defaultValue: { kind: 'today' } }),
       content: fields.markdoc({ label: 'Content' }),
     },
   });
@@ -44,13 +37,34 @@ export default config({
   ui: {
     brand: { name: 'magnushkaspersen.com' },
     navigation: {
-      Write: ['posts', 'projects'],
+      Write: ['weeks', 'posts', 'projects'],
       Collect: ['photos', 'books'],
-      Pages: ['aboutEn', 'aboutDa', 'nowEn', 'nowDa', 'settings'],
+      Pages: ['aboutEn', 'aboutDa', 'settings'],
     },
   },
 
   collections: {
+    weeks: collection({
+      label: 'Weeks',
+      slugField: 'name',
+      path: 'src/content/weeks/*',
+      format: 'yaml',
+      columns: ['name', 'date'],
+      schema: {
+        name: fields.slug({
+          name: { label: 'Name', description: 'Just for you, e.g. "2026 week 46".' },
+        }),
+        date: fields.date({
+          label: 'Any day in the week',
+          description: 'The site works out the week number from this.',
+          defaultValue: { kind: 'today' },
+          validation: { isRequired: true },
+        }),
+        textEn: fields.text({ label: 'This week (English)', multiline: true, validation: { length: { min: 1 } } }),
+        textDa: fields.text({ label: 'Denne uge (Dansk)', multiline: true }),
+      },
+    }),
+
     posts: collection({
       label: 'Writing',
       slugField: 'title',
@@ -154,8 +168,6 @@ export default config({
   singletons: {
     aboutEn: pageSingleton('About (English)', 'src/content/pages/about-en'),
     aboutDa: pageSingleton('Om (Dansk)', 'src/content/pages/about-da'),
-    nowEn: pageSingleton('Now (English)', 'src/content/pages/now-en', true),
-    nowDa: pageSingleton('Nu (Dansk)', 'src/content/pages/now-da', true),
     settings: singleton({
       label: 'Site settings',
       path: 'src/content/settings/site',

@@ -22,7 +22,7 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 - **About / story**: who I am now, and the shift that got me here
 - **Writing / notes**: essays and shorter notes, the main thing that changes on the site
 - **Projects / things I make**: work, side projects, experiments
-- **Now + links**: what I'm up to this month, plus where to find me
+- **Weeks**: a week log, one sentence a week about what I'm doing (replaced the Now page, which only repeated other pages). Links to elsewhere live in the footer
 
 **Extras**
 - **Photos / visual diary**: a photo stream
@@ -59,7 +59,7 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 ## Layout (after the "less AI" pass)
 
 - **Weekly notebook:** every page has a left margin column for context (week numbers, dates, section names, the reading line) and a ~42rem reading column. Left aligned; the right side of wide screens stays open
-- **Hero:** the "This week…" sentence (edited on the Now page) as the big headline. The margin says "Week 46, 2026": the ISO week of the latest Now update, since Danes date things by week number
+- **Hero:** the latest week-log sentence as the big headline. The margin says "Week 46, 2026": the ISO week of that entry, since Danes date things by week number
 - **Weeks grid (flair):** the year as 52 small squares under the hero label (and on the Writing page). Weeks with a post or photo are pine and link to it; this week breathes; a nod to *Four Thousand Weeks*
 - **Print texture (flair):** a fine fixed paper grain over the page, and every pine mark printed twice, the second pass a pixel off, like a risograph
 - **Pine** only on underlines, rules and the reading line. **Plex Mono** only for numbers in the margin

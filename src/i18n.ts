@@ -12,7 +12,7 @@ const ui = {
     'nav.projects': 'Projects',
     'nav.photos': 'Photos',
     'nav.bookshelf': 'Bookshelf',
-    'nav.now': 'Now',
+    'nav.weeks': 'Weeks',
     'nav.contact': 'Contact',
     'nav.skip': 'Skip to content',
     'lang.switch': 'Dansk',
@@ -23,7 +23,7 @@ const ui = {
     'home.allWriting': 'All writing',
     'home.projects': 'Projects',
     'home.allProjects': 'All projects',
-    'home.now': 'More on the Now page',
+    'home.earlier': 'Earlier weeks',
     'home.photos': 'Photos',
     'home.allPhotos': 'All photos',
     'home.reading': 'Reading',
@@ -46,7 +46,8 @@ const ui = {
     'books.current': 'Reading now',
     'books.finished': 'Finished',
     'books.next': 'Up next',
-    'now.updated': 'Updated',
+    'weeks.title': 'Weeks',
+    'weeks.intro': 'One sentence a week about what I’m doing, newest first.',
     'now.elsewhere': 'Elsewhere',
     'contact.title': 'Contact',
     'contact.intro': 'Write to me. I read everything, and reply to most.',
@@ -68,7 +69,6 @@ const ui = {
     'footer.orForm': 'or use the',
     'footer.form': 'contact form',
     'footer.follow2': 'Follow new writing by',
-    'now.thisWeek': 'This week',
     'notfound.title': 'This page has moved on',
     'notfound.body': "There's nothing at this address. Try the homepage or the writing archive.",
   },
@@ -79,7 +79,7 @@ const ui = {
     'nav.projects': 'Projekter',
     'nav.photos': 'Fotos',
     'nav.bookshelf': 'Bogreol',
-    'nav.now': 'Nu',
+    'nav.weeks': 'Uger',
     'nav.contact': 'Kontakt',
     'nav.skip': 'Gå til indhold',
     'lang.switch': 'English',
@@ -90,7 +90,7 @@ const ui = {
     'home.allWriting': 'Alt skrevet',
     'home.projects': 'Projekter',
     'home.allProjects': 'Alle projekter',
-    'home.now': 'Mere på Nu-siden',
+    'home.earlier': 'Tidligere uger',
     'home.photos': 'Fotos',
     'home.allPhotos': 'Alle fotos',
     'home.reading': 'Læser',
@@ -113,7 +113,8 @@ const ui = {
     'books.current': 'Læser nu',
     'books.finished': 'Færdig',
     'books.next': 'Næste',
-    'now.updated': 'Opdateret',
+    'weeks.title': 'Uger',
+    'weeks.intro': 'Én sætning om ugen om, hvad jeg laver. Nyeste først.',
     'now.elsewhere': 'Andre steder',
     'contact.title': 'Kontakt',
     'contact.intro': 'Skriv til mig. Jeg læser alt og svarer på det meste.',
@@ -135,7 +136,6 @@ const ui = {
     'footer.orForm': 'eller brug',
     'footer.form': 'kontaktformularen',
     'footer.follow2': 'Følg nye tekster via',
-    'now.thisWeek': 'Denne uge',
     'notfound.title': 'Denne side er gået videre',
     'notfound.body': 'Der er intet på denne adresse. Prøv forsiden eller arkivet.',
   },
@@ -171,3 +171,15 @@ export function isoWeek(date: Date) {
 }
 
 export const weekLabel = (lang: Lang, date: Date) => `${lang === 'da' ? 'Uge' : 'Week'} ${isoWeek(date).week}`;
+
+/** "9–15 November" for the ISO week containing `date`. */
+export function weekRange(lang: Lang, date: Date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const mon = new Date(d); mon.setUTCDate(d.getUTCDate() - ((d.getUTCDay() || 7) - 1));
+  const sun = new Date(mon); sun.setUTCDate(mon.getUTCDate() + 6);
+  const fmt = (x: Date, opts: Intl.DateTimeFormatOptions) => x.toLocaleDateString(locales[lang], { ...opts, timeZone: 'UTC' });
+  const sameMonth = mon.getUTCMonth() === sun.getUTCMonth();
+  const end = fmt(sun, { day: 'numeric', month: 'long' });
+  const start = sameMonth ? fmt(mon, { day: 'numeric' }) : fmt(mon, { day: 'numeric', month: 'long' });
+  return `${start}–${end}`;
+}
