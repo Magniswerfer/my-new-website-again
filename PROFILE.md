@@ -56,6 +56,16 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 
 **Tension to keep in balance:** the calm editorial layout and the characterful display face pull in different directions. Use the display face loudly in a few places (name, section titles) and keep everything else quiet.
 
+## Signature moments (shortlist, being prototyped)
+
+1. **Name settles in**: on first load the name eases from tight tracking to `+0.05rem`
+2. **Living pine dot**: the dot after the name breathes slowly; hover or tap shows the current Now line
+3. **Underline → heading**: a post link's pine underline becomes the rule under the post title (View Transitions)
+4. **Reading line**: a pine line with the dot at its tip draws down the margin of essays
+5. **Bookshelf spines**: books tilt out on hover and open into a note; titles run bottom to top
+
+Still to decide: which of these ship at launch.
+
 ## Technical direction
 
 | | Recommendation |
@@ -72,5 +82,4 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 ## Open questions (for later)
 
 - Should the existing personal design system be reused, or should the "new me" get a fresh visual identity?
-- Which signature moment(s) to build first
 - Newsletter provider and whether it sends automatically from new posts
