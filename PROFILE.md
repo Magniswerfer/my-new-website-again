@@ -55,6 +55,7 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 
 | | Recommendation |
 |---|---|
+| **Domain** | **magnushkaspersen.com** (primary). **magnus.hk** as a short alias that redirects to it, if the renewal at Alibaba goes through |
 | **Framework** | Astro: static, fast, has built-in i18n routing and content collections |
 | **Editing** | A simple CMS. Recommended: **Keystatic** or **Decap CMS**. Both are git-based, give a web UI for writing, and need no database |
 | **Hosting** | **Cloudflare** Pages/Workers |
@@ -65,7 +66,6 @@ A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It
 
 ## Open questions (for later)
 
-- Name / domain for the site
 - Which accent colour and which display typeface. Next step: a few type + colour pairings to choose between
 - Should the existing personal design system be reused, or should the "new me" get a fresh visual identity?
 - Which signature moment(s) to build first
