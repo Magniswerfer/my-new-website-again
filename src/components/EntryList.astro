@@ -1,0 +1,42 @@
+---
+/**
+ * A list of dated links. Each link's pine underline carries a
+ * view-transition-name that matches the heading rule on the target page,
+ * so clicking it morphs the underline into that rule (signature moment 1).
+ */
+import { isoDate } from '~/i18n';
+import { ruleName } from '~/lib/content';
+
+interface Item { id: string; href: string; title: string; date?: Date; meta?: string; summary?: string }
+interface Props { items: Item[]; collection: 'posts' | 'projects'; showSummary?: boolean }
+const { items, collection, showSummary = false } = Astro.props;
+---
+
+<ol class="entries">
+  {items.map((item) => (
+    <li>
+      <span class="meta mono">{item.date ? <time datetime={item.date.toISOString()}>{isoDate(item.date)}</time> : item.meta}</span>
+      <div class="main">
+        <a href={item.href}>
+          {item.title}
+          <span class="ul" aria-hidden="true" transition:name={ruleName(collection, item.id)}></span>
+        </a>
+        {showSummary && item.summary && <p>{item.summary}</p>}
+      </div>
+    </li>
+  ))}
+</ol>
+
+<style>
+  .entries { list-style: none; margin: 0; padding: 0; }
+  li {
+    display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 1rem;
+    padding-block: 0.9rem; border-top: 1px solid var(--rule); align-items: baseline;
+  }
+  .main { display: grid; gap: 0.3rem; min-width: 0; }
+  a { position: relative; display: inline; text-decoration: none; font-size: var(--step-0); padding-bottom: 3px; justify-self: start; }
+  .ul { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--pine); }
+  a:hover { color: var(--pine); }
+  p { color: var(--muted); font-size: 0.95rem; max-width: 56ch; }
+  @media (max-width: 30rem) { li { grid-template-columns: 1fr; gap: 0.15rem; } }
+</style>

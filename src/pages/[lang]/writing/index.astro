@@ -1,0 +1,36 @@
+---
+import Base from '~/layouts/Base.astro';
+import PageHead from '~/components/PageHead.astro';
+import EntryList from '~/components/EntryList.astro';
+import { t, url, langPaths, type Lang } from '~/i18n';
+import { getPosts } from '~/lib/content';
+
+export const getStaticPaths = langPaths;
+const lang = Astro.params.lang as Lang;
+const posts = await getPosts(lang);
+
+const years = [...new Set(posts.map((p) => p.data.date.getUTCFullYear()))];
+---
+
+<Base lang={lang} title={t(lang, 'writing.title')} current="writing">
+  <PageHead title={t(lang, 'writing.title')} intro={t(lang, 'writing.intro')} />
+  <div class="years">
+    {years.map((year) => (
+      <section aria-labelledby={`y-${year}`}>
+        <h2 id={`y-${year}`} class="label">{year}</h2>
+        <EntryList
+          collection="posts"
+          showSummary
+          items={posts
+            .filter((p) => p.data.date.getUTCFullYear() === year)
+            .map((p) => ({ id: p.id, href: url(lang, 'writing', p.id), title: p.data.title, date: p.data.date, summary: p.data.summary }))}
+        />
+      </section>
+    ))}
+  </div>
+</Base>
+
+<style>
+  .years { display: grid; gap: calc(var(--space) * 1.5); max-width: 52rem; }
+  h2 { margin-bottom: 0.6rem; }
+</style>

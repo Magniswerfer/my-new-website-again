@@ -1,0 +1,115 @@
+---
+import { Image } from 'astro:assets';
+import { render } from 'astro:content';
+import Base from '~/layouts/Base.astro';
+import EntryList from '~/components/EntryList.astro';
+import { t, url, langPaths, formatDate, type Lang } from '~/i18n';
+import { getPosts, getProjects, getPhotos, getBooks, getPage } from '~/lib/content';
+
+export const getStaticPaths = langPaths;
+const lang = Astro.params.lang as Lang;
+
+const posts = (await getPosts(lang)).slice(0, 5);
+const allProjects = await getProjects(lang);
+const projects = (allProjects.some((p) => p.data.featured) ? allProjects.filter((p) => p.data.featured) : allProjects).slice(0, 3);
+const photos = (await getPhotos()).slice(0, 3);
+const reading = (await getBooks()).filter((b) => b.data.status === 'current').slice(0, 2);
+const now = await getPage('now', lang);
+const { Content: NowContent } = now ? await render(now) : { Content: null };
+---
+
+<Base lang={lang}>
+  <section class="hero">
+    <h1 set:html={t(lang, 'home.hero')} />
+    <p class="lede">{t(lang, 'home.intro')}</p>
+  </section>
+
+  <div class="grid">
+    <section class="latest" aria-labelledby="h-latest">
+      <div class="sec-head">
+        <h2 id="h-latest" class="label">{t(lang, 'home.latest')}</h2>
+        <a class="mono more" href={url(lang, 'writing')}>{t(lang, 'home.allWriting')} →</a>
+      </div>
+      <EntryList
+        collection="posts"
+        items={posts.map((p) => ({ id: p.id, href: url(lang, 'writing', p.id), title: p.data.title, date: p.data.date }))}
+      />
+    </section>
+
+    <aside class="side">
+      {now && NowContent && (
+        <section aria-labelledby="h-now" class="now">
+          <div class="sec-head">
+            <h2 id="h-now" class="label">{t(lang, 'home.now')}</h2>
+            {now.data.updated && <span class="mono">{formatDate(lang, now.data.updated, 'short')}</span>}
+          </div>
+          <div class="prose now-body"><NowContent /></div>
+          <a class="mono more" href={url(lang, 'now')}>{t(lang, 'nav.now')} →</a>
+        </section>
+      )}
+      {reading.length > 0 && (
+        <section aria-labelledby="h-reading">
+          <h2 id="h-reading" class="label">{t(lang, 'home.reading')}</h2>
+          <ul class="reading">
+            {reading.map((b) => <li><span class="book">{b.data.title}</span> <span class="mono">{b.data.creator}</span></li>)}
+          </ul>
+        </section>
+      )}
+    </aside>
+  </div>
+
+  {projects.length > 0 && (
+    <section aria-labelledby="h-projects" class="block">
+      <div class="sec-head">
+        <h2 id="h-projects" class="label">{t(lang, 'home.projects')}</h2>
+        <a class="mono more" href={url(lang, 'projects')}>{t(lang, 'home.allProjects')} →</a>
+      </div>
+      <EntryList
+        collection="projects"
+        showSummary
+        items={projects.map((p) => ({ id: p.id, href: url(lang, 'projects', p.id), title: p.data.title, meta: String(p.data.year), summary: p.data.summary }))}
+      />
+    </section>
+  )}
+
+  {photos.length > 0 && (
+    <section aria-labelledby="h-photos" class="block">
+      <div class="sec-head">
+        <h2 id="h-photos" class="label">{t(lang, 'home.photos')}</h2>
+        <a class="mono more" href={url(lang, 'photos')}>{t(lang, 'home.allPhotos')} →</a>
+      </div>
+      <div class="strip">
+        {photos.map((p) => (
+          <a href={url(lang, 'photos') + '#' + p.id} class="thumb">
+            <Image src={p.data.image} alt={(lang === 'da' ? p.data.captionDa : p.data.captionEn) ?? p.data.title} widths={[360, 720]} sizes="(max-width: 40rem) 100vw, 33vw" />
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .hero { display: grid; gap: 1.25rem; padding-block: clamp(1.5rem, 6vw, 4.5rem) calc(var(--space) * 1.6); }
+  .hero h1 { font-size: var(--step-4); line-height: 1; max-width: 14ch; }
+  .hero :global(em) { font-style: normal; color: var(--pine); }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: calc(var(--space) * 1.5); align-items: start; }
+  @media (max-width: 52rem) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .side { display: grid; gap: var(--space); }
+
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: 0.6rem; }
+  .more { text-decoration: none; }
+  .more:hover { color: var(--pine); }
+
+  .now { background: var(--surface); border-radius: 12px; padding: 1.25rem; display: grid; gap: 0.75rem; }
+  .now-body { font-size: 0.95rem; gap: 0.6em; }
+  .now-body :global(em:only-child) { color: var(--muted); }
+  .reading { list-style: none; padding: 0; margin: 0.6rem 0 0; display: grid; gap: 0.5rem; }
+  .book { font-family: var(--f-display); font-weight: 700; letter-spacing: var(--track); }
+
+  .block { margin-top: calc(var(--space) * 2); }
+  .strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-top: 0.4rem; }
+  @media (max-width: 40rem) { .strip { grid-template-columns: minmax(0, 1fr); } }
+  .thumb img { aspect-ratio: 4 / 3; object-fit: cover; width: 100%; border-radius: 6px; background: var(--surface); }
+</style>

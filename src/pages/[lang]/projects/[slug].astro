@@ -1,0 +1,37 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '~/layouts/Base.astro';
+import Article from '~/components/Article.astro';
+import { t, url, type Lang } from '~/i18n';
+import { getTranslation, ruleName } from '~/lib/content';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+  return projects.map((project) => ({ params: { lang: project.data.lang, slug: project.id }, props: { project } }));
+}
+
+const { project } = Astro.props;
+const lang = project.data.lang as Lang;
+const { Content } = await render(project);
+const translation = await getTranslation('projects', project);
+const alternate = translation ? url(translation.data.lang, 'projects', translation.id) : undefined;
+---
+
+<Base lang={lang} title={project.data.title} description={project.data.summary} alternate={alternate} current="projects">
+  <Article
+    backHref={url(lang, 'projects')}
+    backLabel={t(lang, 'project.back')}
+    meta={[String(project.data.year), project.data.summary].filter(Boolean).join(' · ')}
+    title={project.data.title}
+    ruleName={ruleName('projects', project.id)}
+  >
+    <Content />
+    {project.data.link && (
+      <p slot="after" class="visit"><a href={project.data.link}>{t(lang, 'project.visit')} ↗</a></p>
+    )}
+  </Article>
+</Base>
+
+<style>
+  .visit { margin-top: var(--space); font-family: var(--f-mono); font-size: var(--step--1); }
+</style>

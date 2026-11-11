@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "magnushkaspersen-com",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true }
+  // Custom domains (magnushkaspersen.com, magnus.hk) are attached in the
+  // Cloudflare dashboard under Workers & Pages → this worker → Domains & Routes.
+}

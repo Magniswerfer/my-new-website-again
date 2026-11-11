@@ -1,0 +1,75 @@
+---
+import { TURNSTILE_SITE_KEY } from 'astro:env/client';
+import Base from '~/layouts/Base.astro';
+import PageHead from '~/components/PageHead.astro';
+import { t, langPaths, type Lang } from '~/i18n';
+import { getSettings } from '~/lib/content';
+
+export const getStaticPaths = langPaths;
+const lang = Astro.params.lang as Lang;
+const settings = await getSettings();
+---
+
+<Base lang={lang} title={t(lang, 'contact.title')}>
+  <PageHead title={t(lang, 'contact.title')} intro={t(lang, 'contact.intro')} />
+
+  <p class="error" role="alert" hidden data-contact-error>{t(lang, 'contact.error')}</p>
+
+  <form method="post" action="/api/contact" class="form">
+    <input type="hidden" name="lang" value={lang} />
+    <div class="hp" aria-hidden="true">
+      <label for="c-website">Website</label>
+      <input id="c-website" name="website" tabindex="-1" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label for="c-name">{t(lang, 'contact.name')}</label>
+      <input id="c-name" name="name" required autocomplete="name" maxlength="200" />
+    </div>
+    <div class="field">
+      <label for="c-email">{t(lang, 'contact.email')}</label>
+      <input id="c-email" name="email" type="email" required autocomplete="email" maxlength="320" />
+    </div>
+    <div class="field">
+      <label for="c-message">{t(lang, 'contact.message')}</label>
+      <textarea id="c-message" name="message" required rows="7" maxlength="5000"></textarea>
+    </div>
+    {TURNSTILE_SITE_KEY && (
+      <>
+        <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-language={lang}></div>
+        <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+      </>
+    )}
+    <button type="submit">{t(lang, 'contact.send')}</button>
+  </form>
+
+  {settings.email && (
+    <p class="alt mono">{t(lang, 'contact.or')} <a href={`mailto:${settings.email}`}>{settings.email}</a></p>
+  )}
+</Base>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    const el = document.querySelector<HTMLElement>('[data-contact-error]');
+    if (el && new URLSearchParams(location.search).has('error')) el.hidden = false;
+  });
+</script>
+
+<style>
+  .form { display: grid; gap: 1.1rem; max-width: 36rem; }
+  .field { display: grid; gap: 0.35rem; }
+  label { font-family: var(--f-mono); font-size: var(--step--1); color: var(--muted); }
+  input, textarea {
+    font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 0.7rem 0.85rem; width: 100%;
+  }
+  input:focus, textarea:focus { border-color: var(--pine); outline: none; box-shadow: 0 0 0 3px var(--selection); }
+  textarea { resize: vertical; }
+  button {
+    justify-self: start; font: 500 0.95rem/1 var(--f-text); color: var(--paper); background: var(--ink);
+    border: 0; border-radius: 999px; padding: 0.85rem 1.4rem; cursor: pointer;
+  }
+  button:hover { background: var(--pine); }
+  .hp { position: absolute; left: -9999px; }
+  .error { max-width: 36rem; margin-bottom: 1.25rem; padding: 0.8rem 1rem; border-left: 3px solid var(--pine); background: var(--surface); }
+  .alt { margin-top: calc(var(--space) * 1.25); }
+</style>

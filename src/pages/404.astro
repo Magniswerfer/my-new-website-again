@@ -1,0 +1,16 @@
+---
+import Base from '~/layouts/Base.astro';
+import PageHead from '~/components/PageHead.astro';
+import { t, url } from '~/i18n';
+---
+
+<Base lang="en" title="Not found" alternate="/da/">
+  <PageHead title={t('en', 'notfound.title')} intro={t('en', 'notfound.body')} />
+  <p class="mono links">
+    <a href={url('en')}>Home</a> · <a href={url('en', 'writing')}>Writing</a> · <a href={url('da')} lang="da">Dansk</a>
+  </p>
+</Base>
+
+<style>
+  .links { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+</style>

@@ -1,0 +1,26 @@
+---
+import Base from '~/layouts/Base.astro';
+import PageHead from '~/components/PageHead.astro';
+import EntryList from '~/components/EntryList.astro';
+import { t, url, langPaths, type Lang } from '~/i18n';
+import { getProjects } from '~/lib/content';
+
+export const getStaticPaths = langPaths;
+const lang = Astro.params.lang as Lang;
+const projects = await getProjects(lang);
+---
+
+<Base lang={lang} title={t(lang, 'projects.title')} current="projects">
+  <PageHead title={t(lang, 'projects.title')} intro={t(lang, 'projects.intro')} />
+  <div class="list">
+    <EntryList
+      collection="projects"
+      showSummary
+      items={projects.map((p) => ({ id: p.id, href: url(lang, 'projects', p.id), title: p.data.title, meta: String(p.data.year), summary: p.data.summary }))}
+    />
+  </div>
+</Base>
+
+<style>
+  .list { max-width: 52rem; }
+</style>

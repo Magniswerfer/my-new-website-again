@@ -1,0 +1,46 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '~/layouts/Base.astro';
+import Article from '~/components/Article.astro';
+import { t, url, formatDate, type Lang } from '~/i18n';
+import { getTranslation, ruleName, readingMinutes } from '~/lib/content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts', ({ data }) => import.meta.env.DEV || !data.draft);
+  return posts.map((post) => ({ params: { lang: post.data.lang, slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const lang = post.data.lang as Lang;
+const { Content } = await render(post);
+const translation = await getTranslation('posts', post);
+const isEssay = post.data.kind === 'essay';
+const meta = [
+  t(lang, isEssay ? 'post.essay' : 'post.note'),
+  formatDate(lang, post.data.date),
+  isEssay ? `${readingMinutes(post.body)} ${t(lang, 'post.min')}` : null,
+].filter(Boolean).join(' · ');
+const alternate = translation ? url(translation.data.lang, 'writing', translation.id) : undefined;
+---
+
+<Base lang={lang} title={post.data.title} description={post.data.summary} alternate={alternate} current="writing">
+  <Article
+    backHref={url(lang, 'writing')}
+    backLabel={t(lang, 'post.back')}
+    meta={meta}
+    title={post.data.title}
+    ruleName={ruleName('posts', post.id)}
+    readingLine={isEssay}
+  >
+    <Content />
+    <p slot="after" class="mono translation">
+      {translation
+        ? <a href={alternate} hreflang={translation.data.lang} data-astro-reload>{t(lang, 'post.alsoIn')}: {translation.data.title}</a>
+        : t(lang, 'post.onlyIn')}
+    </p>
+  </Article>
+</Base>
+
+<style>
+  .translation { margin-top: calc(var(--space) * 1.5); padding-top: 1rem; border-top: 1px solid var(--rule); max-width: var(--measure); }
+</style>

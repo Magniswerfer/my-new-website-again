@@ -76,7 +76,12 @@ Both respect `prefers-reduced-motion` (no animation; the end state is shown). Co
 | **i18n** | `/en/` and `/da/` routes. A post can exist in one language or both. Show a note when a translation is missing |
 | **Photos** | Astro image optimisation; photos stored in the repo or in Cloudflare R2 if the library grows |
 
+## Build status
+
+The site skeleton is built: all sections in EN and DA, Keystatic editing, RSS, sitemap, the contact endpoint and both signature moments. See `README.md` for running, editing and deploying. All content is still sample copy.
+
 ## Open questions (for later)
 
-- Should the existing personal design system be reused, or should the "new me" get a fresh visual identity?
 - Newsletter provider and whether it sends automatically from new posts
+- Write the real About text (EN + DA)
+- Set up Cloudflare deploy, Keystatic GitHub App, Resend and Turnstile secrets

@@ -1,0 +1,31 @@
+---
+// The root sends visitors to their language: Danish browsers to /da/,
+// everyone else to /en/. A remembered choice from the language switch wins.
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Magnus H. Kaspersen</title>
+    <link rel="canonical" href="https://magnushkaspersen.com/en/" />
+    <link rel="alternate" hreflang="en" href="https://magnushkaspersen.com/en/" />
+    <link rel="alternate" hreflang="da" href="https://magnushkaspersen.com/da/" />
+    <link rel="alternate" hreflang="x-default" href="https://magnushkaspersen.com/en/" />
+    <script is:inline>
+      (function () {
+        var lang = 'en';
+        try {
+          var saved = localStorage.getItem('lang');
+          if (saved === 'en' || saved === 'da') lang = saved;
+          else if ((navigator.languages || [navigator.language]).some(function (l) { return /^(da|nb|nn|no)\b/i.test(l || ''); })) lang = 'da';
+        } catch (e) {}
+        location.replace('/' + lang + '/');
+      })();
+    </script>
+    <noscript><meta http-equiv="refresh" content="0; url=/en/" /></noscript>
+    <style>body{margin:0;background:#eef0eb}@media (prefers-color-scheme:dark){body{background:#101411}}</style>
+  </head>
+  <body></body>
+</html>

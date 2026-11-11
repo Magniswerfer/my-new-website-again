@@ -1,0 +1,149 @@
+@import '@fontsource-variable/schibsted-grotesk';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/400-italic.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+/* ------------------------------------------------------------------
+   Tokens — from PROFILE.md. Pine palette, Schibsted Grotesk headlines
+   at +0.05rem, IBM Plex Sans for text, IBM Plex Mono for details.
+   ------------------------------------------------------------------ */
+:root {
+  --paper: #eef0eb;
+  --surface: #f6f7f4;
+  --ink: #121614;
+  --muted: #5f6964;
+  --pine: #1f6b47;
+  --rule: rgb(18 22 20 / 0.13);
+  --selection: rgb(31 107 71 / 0.18);
+
+  --f-display: 'Schibsted Grotesk Variable', 'Helvetica Neue', Arial, sans-serif;
+  --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --track: 0.05rem;
+
+  --step--1: 0.8125rem;
+  --step-0: 1.0625rem;
+  --step-1: 1.3rem;
+  --step-2: clamp(1.6rem, 1.2rem + 1.6vw, 2.2rem);
+  --step-3: clamp(2.1rem, 1.4rem + 3vw, 3.4rem);
+  --step-4: clamp(2.6rem, 1.4rem + 5vw, 4.6rem);
+
+  --measure: 62ch;
+  --page: 72rem;
+  --gutter: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  --space: clamp(1.25rem, 0.8rem + 2vw, 2.5rem);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #101411;
+    --surface: #161b17;
+    --ink: #e5eae6;
+    --muted: #8e9893;
+    --pine: #62c795;
+    --rule: rgb(229 234 230 / 0.13);
+    --selection: rgb(98 199 149 / 0.25);
+    color-scheme: dark;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-rendering: optimizeLegibility; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-text);
+  font-size: var(--step-0);
+  line-height: 1.6;
+  font-feature-settings: 'kern';
+}
+::selection { background: var(--selection); }
+img { max-width: 100%; height: auto; display: block; }
+
+h1, h2, h3, .display {
+  font-family: var(--f-display);
+  font-weight: 800;
+  letter-spacing: var(--track);
+  line-height: 1.05;
+  text-wrap: balance;
+  margin: 0;
+}
+h1 { font-size: var(--step-3); }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); line-height: 1.2; }
+p { margin: 0; }
+
+a { color: inherit; text-decoration-color: var(--pine); text-decoration-thickness: 1.5px; text-underline-offset: 0.22em; }
+a:hover { color: var(--pine); }
+:focus-visible { outline: 2px solid var(--pine); outline-offset: 3px; border-radius: 2px; }
+
+.mono, time {
+  font-family: var(--f-mono);
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+.label {
+  font-family: var(--f-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.wrap {
+  width: 100%;
+  max-width: calc(var(--page) + var(--gutter) + var(--gutter-r));
+  margin-inline: auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter-r);
+}
+.stack { display: grid; gap: var(--space); }
+.lede { font-size: var(--step-1); line-height: 1.5; max-width: 46ch; }
+.visually-hidden {
+  position: absolute !important; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* Long-form text (Markdoc output, which wraps itself in an <article>) */
+.prose { max-width: var(--measure); display: grid; gap: 1.1em; }
+.prose > article { display: contents; }
+.prose h2 { font-size: var(--step-1); margin-top: 1em; }
+.prose h3 { font-size: var(--step-0); margin-top: 0.6em; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.2em; display: grid; gap: 0.4em; }
+.prose blockquote { margin: 0; padding-left: 1.1em; border-left: 2px solid var(--pine); color: var(--muted); }
+.prose code { font-family: var(--f-mono); font-size: 0.9em; background: var(--surface); padding: 0.1em 0.3em; border-radius: 4px; }
+.prose pre { overflow-x: auto; background: var(--surface); padding: 1em; border-radius: 8px; font-size: 0.875rem; }
+.prose pre code { background: none; padding: 0; }
+.prose img { border-radius: 6px; background: var(--surface); }
+.prose hr { border: 0; border-top: 1px solid var(--rule); width: 100%; }
+
+/* ------------------------------------------------------------------
+   Signature moment 1: underline → heading rule.
+   The list underline and the post's rule share a view-transition-name;
+   these settings shape the morph between them.
+   ------------------------------------------------------------------ */
+::view-transition-group(*) {
+  animation-duration: 0.62s;
+  animation-timing-function: var(--ease);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.28s;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}

@@ -1,0 +1,60 @@
+---
+import { t, url, type Lang } from '~/i18n';
+import { getSettings } from '~/lib/content';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const settings = await getSettings();
+const year = new Date().getFullYear();
+---
+
+<footer class="wrap">
+  <div class="cols">
+    {settings.buttondownUsername && (
+      <form
+        class="news"
+        action={`https://buttondown.com/api/emails/embed-subscribe/${settings.buttondownUsername}`}
+        method="post"
+        target="_blank"
+      >
+        <p class="label">{t(lang, 'footer.follow')}</p>
+        <p>{t(lang, 'footer.newsletter')}</p>
+        <div class="row">
+          <label class="visually-hidden" for="bd-email">{t(lang, 'footer.emailLabel')}</label>
+          <input id="bd-email" type="email" name="email" required autocomplete="email" placeholder={t(lang, 'footer.emailLabel')} />
+          <input type="hidden" name="tag" value={lang} />
+          <button type="submit">{t(lang, 'footer.subscribe')}</button>
+        </div>
+      </form>
+    )}
+    <div class="links">
+      <p class="label">{t(lang, 'now.elsewhere')}</p>
+      <ul>
+        {settings.links.map((l) => <li><a href={l.url} rel="me">{l.label}</a></li>)}
+        <li><a href={url(lang, 'contact')}>{t(lang, 'nav.contact')}</a></li>
+        <li><a href={url(lang, 'rss.xml').slice(0, -1)}>{t(lang, 'footer.rss')}</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="mono small">© {year} Magnus H. Kaspersen · magnushkaspersen.com</p>
+</footer>
+
+<style>
+  footer { border-top: 1px solid var(--rule); padding-block: var(--space) calc(var(--space) + env(safe-area-inset-bottom, 0px)); display: grid; gap: var(--space); }
+  .cols { display: flex; flex-wrap: wrap; gap: var(--space) calc(var(--space) * 2); justify-content: space-between; }
+  .news { display: grid; gap: 0.5rem; max-width: 30rem; min-width: 0; }
+  .news p:not(.label) { color: var(--muted); font-size: 0.95rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem; }
+  input[type='email'] {
+    flex: 1 1 14rem; min-width: 0; font: inherit; font-size: 0.95rem; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--rule); border-radius: 999px; padding: 0.6rem 1rem;
+  }
+  button {
+    font: 500 0.9rem/1 var(--f-text); color: var(--paper); background: var(--ink); border: 0;
+    border-radius: 999px; padding: 0.7rem 1.2rem; cursor: pointer;
+  }
+  button:hover { background: var(--pine); }
+  .links ul { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.25rem; }
+  .links a { font-family: var(--f-mono); font-size: var(--step--1); }
+  .small { font-size: 0.75rem; }
+</style>
