@@ -3,6 +3,7 @@ import Base from '~/layouts/Base.astro';
 import PageHead from '~/components/PageHead.astro';
 import EntryList from '~/components/EntryList.astro';
 import WeeksGrid from '~/components/WeeksGrid.astro';
+import Empty from '~/components/Empty.astro';
 import { t, url, langPaths, type Lang } from '~/i18n';
 import { getPosts } from '~/lib/content';
 
@@ -15,11 +16,13 @@ const posts = await getPosts(lang);
   <PageHead title={t(lang, 'writing.title')} intro={t(lang, 'writing.intro')}>
     <WeeksGrid slot="margin" lang={lang} />
   </PageHead>
-  <EntryList
-    lang={lang}
-    collection="posts"
-    showSummary
-    showYear
-    items={posts.map((p) => ({ id: p.id, href: url(lang, 'writing', p.id), title: p.data.title, date: p.data.date, summary: p.data.summary }))}
-  />
+  {posts.length === 0 ? <Empty text={t(lang, 'empty.writing')} /> : (
+    <EntryList
+      lang={lang}
+      collection="posts"
+      showSummary
+      showYear
+      items={posts.map((p) => ({ id: p.id, href: url(lang, 'writing', p.id), title: p.data.title, date: p.data.date, summary: p.data.summary }))}
+    />
+  )}
 </Base>

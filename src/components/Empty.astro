@@ -1,0 +1,21 @@
+---
+/**
+ * Shown where a list has nothing in it yet. Sits on the same
+ * margin/column grid as the entries it stands in for, so a page
+ * looks like a notebook with a blank page, not a broken one.
+ */
+interface Props { text: string }
+const { text } = Astro.props;
+---
+
+<div class="row empty">
+  <div class="margin"><span class="num" aria-hidden="true">—</span></div>
+  <p class="column">{text}</p>
+</div>
+
+<style>
+  .empty p {
+    color: var(--muted); max-width: 34rem;
+    padding-top: 0.9rem; border-top: 1px dashed var(--rule);
+  }
+</style>

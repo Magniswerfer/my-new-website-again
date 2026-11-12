@@ -33,19 +33,21 @@ const { week, year } = isoWeek(latest?.data.date ?? new Date());
         <span class="visually-hidden">{t(lang, 'home.week')} {week}. </span>
         {latest ? weekText(latest, lang) : t(lang, 'home.intro')}
       </h1>
-      <p class="intro">{t(lang, 'home.intro')} <a href={url(lang, 'weeks')}>{t(lang, 'home.earlier')}</a>.</p>
+      {latest && <p class="intro">{t(lang, 'home.intro')} <a href={url(lang, 'weeks')}>{t(lang, 'home.earlier')}</a>.</p>}
     </div>
   </section>
 
-  <section class="section" aria-labelledby="h-writing">
-    <EntryList
-      lang={lang}
-      heading={{ id: 'h-writing', label: t(lang, 'home.latest'), href: url(lang, 'writing') }}
-      collection="posts"
-      showSummary
-      items={posts.map((p) => ({ id: p.id, href: url(lang, 'writing', p.id), title: p.data.title, date: p.data.date, summary: p.data.summary }))}
-    />
-  </section>
+  {posts.length > 0 && (
+    <section class="section" aria-labelledby="h-writing">
+      <EntryList
+        lang={lang}
+        heading={{ id: 'h-writing', label: t(lang, 'home.latest'), href: url(lang, 'writing') }}
+        collection="posts"
+        showSummary
+        items={posts.map((p) => ({ id: p.id, href: url(lang, 'writing', p.id), title: p.data.title, date: p.data.date, summary: p.data.summary }))}
+      />
+    </section>
+  )}
 
   {projects.length > 0 && (
     <section class="section" aria-labelledby="h-projects">

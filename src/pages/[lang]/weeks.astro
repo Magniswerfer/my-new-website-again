@@ -2,6 +2,7 @@
 import Base from '~/layouts/Base.astro';
 import PageHead from '~/components/PageHead.astro';
 import WeeksGrid from '~/components/WeeksGrid.astro';
+import Empty from '~/components/Empty.astro';
 import { t, langPaths, isoWeek, weekLabel, weekRange, isoDate, type Lang } from '~/i18n';
 import { getWeeks, weekText, weekAnchor } from '~/lib/content';
 
@@ -23,6 +24,7 @@ const rows = weeks.map((w) => {
     <WeeksGrid slot="margin" lang={lang} />
   </PageHead>
 
+  {weeks.length === 0 && <Empty text={t(lang, 'empty.weeks')} />}
   <ol class="log">
     {rows.map(({ entry, year, showYear }) => (
       <li class="row" id={weekAnchor(entry.data.date)}>

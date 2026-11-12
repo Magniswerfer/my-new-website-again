@@ -2,6 +2,7 @@
 import { Image } from 'astro:assets';
 import Base from '~/layouts/Base.astro';
 import PageHead from '~/components/PageHead.astro';
+import Empty from '~/components/Empty.astro';
 import { t, langPaths, formatDate, weekLabel, type Lang } from '~/i18n';
 import { getPhotos } from '~/lib/content';
 
@@ -12,6 +13,7 @@ const photos = await getPhotos();
 
 <Base lang={lang} title={t(lang, 'photos.title')} current="photos">
   <PageHead title={t(lang, 'photos.title')} intro={t(lang, 'photos.intro')} />
+  {photos.length === 0 && <Empty text={t(lang, 'empty.photos')} />}
   <div class="diary">
     {photos.map((p) => {
       const caption = lang === 'da' ? p.data.captionDa : p.data.captionEn;

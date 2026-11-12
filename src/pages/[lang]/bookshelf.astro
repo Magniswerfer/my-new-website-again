@@ -1,6 +1,7 @@
 ---
 import Base from '~/layouts/Base.astro';
 import PageHead from '~/components/PageHead.astro';
+import Empty from '~/components/Empty.astro';
 import { t, langPaths, formatDate, type Lang } from '~/i18n';
 import { getBooks } from '~/lib/content';
 
@@ -17,6 +18,7 @@ const groups = [
 
 <Base lang={lang} title={t(lang, 'books.title')} current="bookshelf">
   <PageHead title={t(lang, 'books.title')} intro={t(lang, 'books.intro')} />
+  {books.length === 0 && <Empty text={t(lang, 'empty.books')} />}
   <div class="groups">
     {groups.map(([status, key]) => {
       const items = books.filter((b) => b.data.status === status);
