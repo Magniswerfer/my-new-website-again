@@ -24,7 +24,7 @@ const add = (date: Date, mark: Mark) => {
 const weekEntries = await getCollection('weeks');
 for (const w of weekEntries) add(w.data.date, { title: weekText(w, lang), href: url(lang, 'weeks') + '#' + weekAnchor(w.data.date) });
 const posts = await getCollection('posts', ({ data }) => !data.draft && data.lang === lang);
-for (const p of posts) add(p.data.date, { title: p.data.title, href: url(lang, 'writing', p.id) });
+for (const p of posts) add(p.data.date, { title: p.data.title, href: url(lang, 'blog', p.id) });
 const photos = await getCollection('photos');
 for (const p of photos) {
   add(p.data.date, { title: (lang === 'da' ? p.data.captionDa : p.data.captionEn) ?? p.data.title, href: url(lang, 'photos') + '#' + p.id });

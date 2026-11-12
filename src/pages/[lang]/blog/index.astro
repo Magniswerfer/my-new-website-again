@@ -12,7 +12,7 @@ const lang = Astro.params.lang as Lang;
 const posts = await getPosts(lang);
 ---
 
-<Base lang={lang} title={t(lang, 'writing.title')} current="writing">
+<Base lang={lang} title={t(lang, 'writing.title')} current="blog">
   <PageHead title={t(lang, 'writing.title')} intro={t(lang, 'writing.intro')}>
     <WeeksGrid slot="margin" lang={lang} />
   </PageHead>
@@ -22,7 +22,7 @@ const posts = await getPosts(lang);
       collection="posts"
       showSummary
       showYear
-      items={posts.map((p) => ({ id: p.id, href: url(lang, 'writing', p.id), title: p.data.title, date: p.data.date, summary: p.data.summary }))}
+      items={posts.map((p) => ({ id: p.id, href: url(lang, 'blog', p.id), title: p.data.title, date: p.data.date, summary: p.data.summary }))}
     />
   )}
 </Base>

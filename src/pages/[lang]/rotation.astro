@@ -16,7 +16,7 @@ const groups = [
 ] as const;
 ---
 
-<Base lang={lang} title={t(lang, 'books.title')} current="bookshelf">
+<Base lang={lang} title={t(lang, 'books.title')} current="rotation">
   <PageHead title={t(lang, 'books.title')} intro={t(lang, 'books.intro')} />
   {books.length === 0 && <Empty text={t(lang, 'empty.books')} />}
   <div class="groups">
@@ -33,7 +33,7 @@ const groups = [
                   <h3>{b.data.title}</h3>
                   <p class="by muted">
                     {b.data.creator}
-                    {status === 'finished' && b.data.date && <>, {lang === 'da' ? 'læst' : 'finished'} {formatDate(lang, b.data.date, 'short')}</>}
+                    {status === 'finished' && b.data.date && <>, {lang === 'da' ? 'færdig' : 'finished'} {formatDate(lang, b.data.date, 'short')}</>}
                   </p>
                   {note && <p class="note">{note}</p>}
                 </li>

@@ -41,10 +41,10 @@ const { week, year } = isoWeek(latest?.data.date ?? new Date());
     <section class="section" aria-labelledby="h-writing">
       <EntryList
         lang={lang}
-        heading={{ id: 'h-writing', label: t(lang, 'home.latest'), href: url(lang, 'writing') }}
+        heading={{ id: 'h-writing', label: t(lang, 'home.latest'), href: url(lang, 'blog') }}
         collection="posts"
         showSummary
-        items={posts.map((p) => ({ id: p.id, href: url(lang, 'writing', p.id), title: p.data.title, date: p.data.date, summary: p.data.summary }))}
+        items={posts.map((p) => ({ id: p.id, href: url(lang, 'blog', p.id), title: p.data.title, date: p.data.date, summary: p.data.summary }))}
       />
     </section>
   )}
@@ -63,7 +63,7 @@ const { week, year } = isoWeek(latest?.data.date ?? new Date());
 
   {reading.length > 0 && (
     <section class="row section" aria-labelledby="h-reading">
-      <div class="margin"><a id="h-reading" class="margin-title" href={url(lang, 'bookshelf')}>{t(lang, 'home.reading')}</a></div>
+      <div class="margin"><a id="h-reading" class="margin-title" href={url(lang, 'rotation')}>{t(lang, 'home.reading')}</a></div>
       <ul class="column reading">
         {reading.map((b) => <li><cite>{b.data.title}</cite> <span class="muted">{lang === 'da' ? 'af' : 'by'} {b.data.creator}</span></li>)}
       </ul>

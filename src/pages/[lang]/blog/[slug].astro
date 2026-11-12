@@ -21,10 +21,10 @@ const margin = [
   formatDate(lang, post.data.date),
   ...(isEssay ? [`${readingMinutes(post.body)} ${t(lang, 'post.min')}`] : []),
 ];
-const alternate = translation ? url(translation.data.lang, 'writing', translation.id) : undefined;
+const alternate = translation ? url(translation.data.lang, 'blog', translation.id) : undefined;
 ---
 
-<Base lang={lang} title={post.data.title} description={post.data.summary} alternate={alternate} current="writing">
+<Base lang={lang} title={post.data.title} description={post.data.summary} alternate={alternate} current="blog">
   <Article margin={margin} title={post.data.title} ruleName={ruleName('posts', post.id)} readingLine={isEssay}>
     <Content />
     <p slot="after" class="translation">

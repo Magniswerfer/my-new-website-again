@@ -66,7 +66,7 @@ export default config({
     }),
 
     posts: collection({
-      label: 'Writing',
+      label: 'Blog',
       slugField: 'title',
       path: 'src/content/posts/*',
       format: { contentField: 'content' },
@@ -131,7 +131,7 @@ export default config({
     }),
 
     books: collection({
-      label: 'Bookshelf & media',
+      label: 'My rotation',
       slugField: 'title',
       path: 'src/content/books/*',
       format: 'yaml',

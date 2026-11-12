@@ -14,6 +14,14 @@ export default defineConfig({
   site: 'https://magnushkaspersen.com',
   trailingSlash: 'ignore',
 
+  // Old section names.
+  redirects: {
+    '/en/writing': '/en/blog/',
+    '/da/writing': '/da/blog/',
+    '/en/bookshelf': '/en/rotation/',
+    '/da/bookshelf': '/da/rotation/',
+  },
+
   // Pages are prerendered by default. Only the contact endpoint and the
   // Keystatic admin (/keystatic) run on demand on Cloudflare.
   output: 'static',
