@@ -96,21 +96,58 @@ def blink(fig):
     return out
 
 
+def figures(sheet, rows, cols):
+    """Find each pose on the sheet as a group of pieces (body, props, marks, shadow),
+    by which grid cell each piece's centre falls in. Nothing is cut at a cell line:
+    a pose that spills into its neighbour's cell keeps all of itself."""
+    a = np.asarray(sheet)[:, :, 3]
+    lab, n = ndimage.label(ndimage.binary_dilation(a > 8, iterations=2))
+    cw, ch = sheet.width / cols, sheet.height / rows
+    groups = {}
+    for i, sl in enumerate(ndimage.find_objects(lab), start=1):
+        m = lab[sl] == i
+        if m.sum() < 40: continue
+        ys, xs = np.nonzero(m)
+        cy, cx = ys.mean() + sl[0].start, xs.mean() + sl[1].start
+        groups.setdefault((int(cy // ch), int(cx // cw)), []).append((i, m.sum(), sl))
+    return lab, groups
+
+
 OUT.mkdir(parents=True, exist_ok=True)
 for f in OUT.glob('*.webp'): f.unlink()
+PAD = 24
 for file, names, scale in SHEETS:
     sheet = Image.open(HERE / file).convert('RGBA')
-    rows, cols = len(names), len(names[0])
-    cw, ch = sheet.width / cols, sheet.height / rows
-    for r, row in enumerate(names):
-        for c, name in enumerate(row):
-            if not name: continue
-            cell = sheet.crop((round(c * cw), round(r * ch), round((c + 1) * cw), round((r + 1) * ch)))
-            cell = cell.resize((cell.width * scale, cell.height * scale), Image.LANCZOS)
-            cell = cell.filter(ImageFilter.UnsharpMask(radius=1.6, percent=40, threshold=2))
-            fig, marks = split(cell)
-            fig.save(OUT / f'{name}.webp', 'WEBP', quality=90, method=4)
-            if marks: marks.save(OUT / f'{name}-marks.webp', 'WEBP', quality=90, method=4)
-            if name == 'stand':
-                blink(fig).save(OUT / 'blink.webp', 'WEBP', quality=90, method=4)
-            print(name, fig.size, 'marks' if marks else '')
+    arr = np.asarray(sheet)
+    lab, groups = figures(sheet, len(names), len(names[0]))
+    cuts = {}
+    for (r, c), parts in groups.items():
+        if r >= len(names) or c >= len(names[0]) or not names[r][c]: continue
+        ids = [i for i, _, _ in parts]
+        mask = np.isin(lab, ids)
+        ys, xs = np.nonzero(mask)
+        y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+        piece = arr[y0:y1, x0:x1].copy(); piece[~mask[y0:y1, x0:x1], 3] = 0
+        # Anchor on the largest piece (the figure itself): its centre and its bottom.
+        main = max(parts, key=lambda p: p[1])
+        my, mx = np.nonzero(lab == main[0])
+        cuts[names[r][c]] = (piece, (mx.min() + mx.max()) / 2 - x0, my.max() + 1 - y0)
+    # One canvas per sheet, big enough for every pose standing on the same baseline.
+    left = max(ax for _, ax, _ in cuts.values()); right = max(p.shape[1] - ax for p, ax, _ in cuts.values())
+    up = max(by for _, _, by in cuts.values()); down = max(p.shape[0] - by for p, _, by in cuts.values())
+    half = int(max(left, right)) + PAD
+    W, H = 2 * half, int(up + down) + 2 * PAD
+    base = int(up) + PAD
+    for name, (piece, ax, by) in cuts.items():
+        canvas = Image.new('RGBA', (W, H))
+        canvas.alpha_composite(Image.fromarray(piece), (int(round(half - ax)), int(round(base - by))))
+        canvas = canvas.resize((W * scale, H * scale), Image.LANCZOS)
+        canvas = canvas.filter(ImageFilter.UnsharpMask(radius=1.6, percent=40, threshold=2))
+        fig, marks = split(canvas)
+        fig.save(OUT / f'{name}.webp', 'WEBP', quality=90, method=4)
+        if marks: marks.save(OUT / f'{name}-marks.webp', 'WEBP', quality=90, method=4)
+        if name == 'stand':
+            blink(fig).save(OUT / 'blink.webp', 'WEBP', quality=90, method=4)
+        print(name, fig.size, 'marks' if marks else '')
+    missing = [n for row in names for n in row if n and n not in cuts]
+    if missing: print('MISSING', missing)

@@ -29,7 +29,7 @@ const lede = latest ? intro : split ? split[2] : undefined;
 
 <Base lang={lang} field="home">
   <section class="hero" aria-labelledby="hello" data-field>
-    <Avatar live class="hero-avatar" sizes="(max-width: 760px) 170px, 340px" label={lang === 'da' ? 'Min lille robotfigur, der vinker' : 'My little robot character, waving'} />
+    <Avatar live class="hero-avatar" sizes="(max-width: 760px) 210px, 440px" label={lang === 'da' ? 'Min lille robotfigur, der vinker' : 'My little robot character, waving'} />
     <div class="hero-in" data-field-text>
       <span class="engraved">{t(lang, 'home.week')} {week} &nbsp;{year}</span>
       <h1 id="hello" class:list={{ long: !!latest }}>{headline}</h1>
@@ -85,11 +85,11 @@ const lede = latest ? intro : split ? split[2] : undefined;
 <style>
   .hero { position: relative; }
   .hero :global(.hero-avatar) {
-    position: absolute; z-index: 2; right: clamp(0px, 6vw, 90px); bottom: clamp(40px, 7vw, 110px);
-    width: clamp(220px, 24vw, 320px); aspect-ratio: 5 / 6;
+    position: absolute; z-index: 3; right: clamp(-40px, 2vw, 60px); bottom: clamp(-60px, -3vw, -20px);
+    width: clamp(280px, 32vw, 440px);
   }
   @media (max-width: 760px) {
-    .hero :global(.hero-avatar) { right: 4px; bottom: 10px; width: 150px; }
+    .hero :global(.hero-avatar) { right: -18px; bottom: -40px; width: 210px; }
   }
   .hero-in {
     display: grid; gap: 20px; max-width: 34rem;

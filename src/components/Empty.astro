@@ -9,7 +9,7 @@ const { text, plain = false, pose = 'beanbag' } = Astro.props;
   <div class="row">
     <div class="margin"></div>
     <div class="column nap">
-      <Avatar class="nap-avatar" pose={pose} label="" sizes="120px" />
+      <Avatar class="nap-avatar" pose={pose} label="" sizes="170px" />
       <p class="empty">{text}</p>
     </div>
   </div>
@@ -18,5 +18,5 @@ const { text, plain = false, pose = 'beanbag' } = Astro.props;
 <style>
   .empty { color: var(--soft); max-width: 40rem; }
   .nap { display: flex; align-items: center; gap: 20px; }
-  .nap :global(.nap-avatar) { flex: none; width: 120px; }
+  .nap :global(.nap-avatar) { flex: none; width: 170px; margin: -36px -20px -36px -34px; }
 </style>

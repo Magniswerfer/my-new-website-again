@@ -19,8 +19,15 @@ const { title, intro, icon, label, pose, poseLabel } = Astro.props;
 
 <style>
   .head { padding-block: clamp(40px, 6vw, 88px) clamp(56px, 8vw, 110px); position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
-  .head :global(.pose) { flex: none; width: clamp(130px, 17vw, 220px); margin-bottom: clamp(-40px, -3vw, -12px); }
-  @media (max-width: 560px) { .head { display: grid; } .head :global(.pose) { justify-self: end; margin-top: -8px; margin-bottom: -24px; } }
+  /* He's allowed to spill: over the margin on the right and into whatever comes next. */
+  .head :global(.pose) {
+    flex: none; position: relative; z-index: 3; width: clamp(180px, 23vw, 300px);
+    margin: -40px calc(-1 * clamp(8px, 3vw, 48px)) clamp(-110px, -8vw, -48px) -40px;
+  }
+  @media (max-width: 560px) {
+    .head { display: grid; }
+    .head :global(.pose) { justify-self: end; width: 170px; margin: -36px -14px -64px 0; }
+  }
   .text { display: grid; gap: 18px; max-width: 36rem; }
   .kicker { display: inline-flex; align-items: center; gap: 8px; }
   .kicker .pic { width: 16px; height: 16px; }

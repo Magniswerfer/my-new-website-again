@@ -45,6 +45,7 @@ const { width, height } = asset(layers[0])!;
 
 <style>
   .avatar { position: relative; user-select: none; -webkit-user-select: none; }
+  .avatar:not([data-avatar]) { pointer-events: none; }
   .layer, .layer img { position: absolute; inset: 0; width: 100%; height: 100%; }
   .layer img { display: block; pointer-events: none; }
   .fig { transform-origin: 50% 90%; }
