@@ -14,8 +14,8 @@ import { getCollection } from 'astro:content';
 import { getPosts, getProjects, getPhotos, getBooks, getWeeks } from '~/lib/content';
 import type { Lang } from '~/i18n';
 
-interface Props { lang: Lang; variant?: 'home' | 'page' }
-const { lang, variant = 'page' } = Astro.props;
+interface Props { lang: Lang; variant?: 'home' | 'page'; section?: string }
+const { lang, variant = 'page', section } = Astro.props;
 
 const counts = {
   projects: (await getProjects(lang)).length,
@@ -27,7 +27,7 @@ const counts = {
 };
 ---
 
-<canvas class="threads" data-threads={JSON.stringify(counts)} data-variant={variant} aria-hidden="true"></canvas>
+<canvas class="threads" data-threads={JSON.stringify(counts)} data-variant={variant} data-section={section} aria-hidden="true"></canvas>
 
 <style>
   .threads { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; z-index: 0; }
@@ -52,6 +52,7 @@ const counts = {
     const g = cv.getContext('2d')!;
     const counts: Counts = JSON.parse(cv.dataset.threads!);
     const home = cv.dataset.variant === 'home';
+    const pageSection = cv.dataset.section;
     const sections = ORDER.map((k) => ({ k, items: counts[k] ?? 0, n: (4 + (counts[k] ?? 0) * 4) * STRANDS }));
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const t0 = performance.now();
@@ -81,6 +82,13 @@ const counts = {
         textBox = { left: b.left - r.left, right: b.right - r.left, top: b.top - r.top, bottom: b.bottom - r.top };
       } else textBox = null;
       bands = [];
+      // Other pages: one band in the page's own colour behind the heading.
+      const headEl = stage.querySelector<HTMLElement>('[data-field]');
+      const own = sections.find((x) => x.k === pageSection);
+      if (!home && headEl && own) {
+        const b = headEl.getBoundingClientRect();
+        bands.push({ ...own, items: Math.max(own.items, 2), top: b.top - r.top, h: b.height });
+      }
       stage.querySelectorAll<HTMLElement>('[data-thread]').forEach((el) => {
         const s = sections.find((x) => x.k === el.dataset.thread);
         if (!s) return;
@@ -101,6 +109,12 @@ const counts = {
 
     function draw(time: number) {
       g.clearRect(0, 0, W, H);
+      const mobile = W < 760;
+      if (home) drawField(time);
+      drawBands(time, mobile);
+    }
+
+    function drawField(time: number) {
       const mobile = W < 760, lines = home ? 84 : 60, Hh = fieldH;
       const dyed: string[] = [];
       sections.forEach((s) => { for (let j = 0; j < Math.round(s.n / STRANDS / 2); j++) dyed.push(s.k); });
@@ -140,7 +154,9 @@ const counts = {
         }
         g.restore();
       }
-      // Section bands, in the background.
+    }
+
+    function drawBands(time: number, mobile: boolean) {
       bands.forEach((s, si) => {
         const n = s.n / STRANDS, width = 10 + s.items * 18, c = rgb(colors[s.k]);
         const grd = g.createLinearGradient(0, 0, W, 0);

@@ -39,6 +39,7 @@ threads and the active state, never for large surfaces.
 | `--led` | `#2FB352` | `#45D06A` | Lit LED (current page, playing, open) |
 | `--led-off` | `#B9B7B0` | `#2A322C` | Unlit LED |
 | `--key-top` / `--key-bottom` | `#FAF9F5` / `#DCDAD3` | `#3B3D41` / `#2C2E31` | Pill key surface |
+| `--key-edge` | `#B3B0A8` | `#141517` | Key side wall |
 | `--recess-strip` | `#D6D4CD` | `#111214` | Recess the keys sit in |
 
 ### Section dyes
@@ -81,8 +82,10 @@ pen, Weeks a calendar with one marked day, Projects a wrench, Photos a camera, M
 ## Components
 
 ### Key
-A pill-shaped button or link sunk into a recess, like the Walkman's PLAY and STOP. Light gradient surface, a 1.5px
-shadow under it, and it presses down 1px when pointed at or pressed. A key can carry an **LED**: a 6–8px dot, unlit
+A pill-shaped key cap sunk into a recess, like the Walkman's PLAY and STOP. It's built like real hardware: a light,
+slightly dished top with a highlight along its upper edge, a 3px side wall underneath (`--key-edge`), and a soft drop
+shadow. Pointing at it lowers it 1px; pressing it travels 3px so the side wall disappears into the body. A key that is
+switched on (the current page, PLAY while playing) stays pressed in. A key can carry an **LED**: a 6–8px dot, unlit
 (`--led-off`) or lit (`--led` with a soft glow).
 
 ### Menu
@@ -95,18 +98,22 @@ shadow under it, and it presses down 1px when pointed at or pressed. A key can c
 Fine horizontal lines cut into a surface. The footer's grooves fade in from the top, so the first lines are almost
 invisible.
 
-### Contour field
-A field of about 84 fine lines that gather into strands and fan out again, like combed fibre. A few lines are dyed in
-each section's colour. It starts behind the header and runs through the hero, edge to edge, and fades out under the
-headline so the text stays clear. On the homepage it fills the hero; on other pages it's a shorter band behind the
-page heading.
+### Contour field (homepage only)
+The hero: a field of about 84 fine lines that gather into strands and fan out again, like combed fibre. A few lines
+are dyed in each section's colour. It starts behind the header and runs through the hero, edge to edge, and fades out
+under the headline so the text stays clear. It appears on the homepage only.
 
 ### Section threads
 Behind each homepage section, a soft band of threads in that section's dye drifts across the page, fading in from the
-left. The more the section holds, the wider the band. Sections are separated by space, not lines.
+left. The more the section holds, the wider the band. Sections are separated by space, not lines. On every other page,
+one band in that page's own dye runs behind the page heading.
 
 ### Footer
-Contact sentences on fading grooves, with two small keys (PLAY and STOP) under the engraved label "Motion".
+Contact sentences on fading grooves. The grooves are dyed: each line takes the next section colour, cycling through all
+six, and they fade in from the top. Below, two small keys (PLAY and STOP) under the engraved label "Motion".
+
+### Avatar
+A small character stands in for Magnus. The brief for generating it is in [`avatar-brief.md`](avatar-brief.md).
 
 ## Motion
 

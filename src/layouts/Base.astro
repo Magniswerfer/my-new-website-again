@@ -49,7 +49,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <Icons />
     <a class="skip" href="#main">{t(lang, 'nav.skip')}</a>
     <div class="stage">
-      <Threads lang={lang} variant={field} />
+      <Threads lang={lang} variant={field} section={current} />
       <Header lang={lang} alternate={alt} current={current} />
       <main id="main" class="wrap">
         <slot />
