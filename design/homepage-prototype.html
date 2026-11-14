@@ -19,20 +19,21 @@
   --soft: #5F5D58;
   --engrave: #8B8880;
   --led: #2FB352;
+  --recess: #CFCDC6;
   --blog: #2E4D8F; --weeks: #B4412F; --projects: #C9962A; --photos: #4F7B52; --rotation: #6E4A6E; --about: #6A5242;
   --f: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --body: #1A1B1E; --groove: rgb(255 255 255 / 0.05); --graphite: #0E0F11; --platinum: #3A3B3F;
-    --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A;
+    --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A; --recess: #0E0F11;
     --blog: #7E9BE0; --weeks: #E2735F; --projects: #E3B653; --photos: #84B585; --rotation: #B98BB9; --about: #C29F86;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --body: #1A1B1E; --groove: rgb(255 255 255 / 0.05); --graphite: #0E0F11; --platinum: #3A3B3F;
-  --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A;
+  --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A; --recess: #0E0F11;
   --blog: #7E9BE0; --weeks: #E2735F; --projects: #E3B653; --photos: #84B585; --rotation: #B98BB9; --about: #C29F86;
   color-scheme: dark;
 }
@@ -54,8 +55,11 @@ a { color: inherit; }
 .c-photos { color: var(--photos); } .c-rotation { color: var(--rotation); } .c-about { color: var(--about); }
 
 /* ---------- Header: grooved panel with a dark diagonal control corner ---------- */
-.head { position: relative; border-bottom: 1px solid var(--groove); }
+.head { position: relative; z-index: 2; border-bottom: 1px solid var(--groove); }
 .head-in { display: flex; align-items: stretch; justify-content: space-between; min-height: 76px; }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.key.menu-key { display: none; }
+.fold { display: flex; }
 .name { align-self: center; font-weight: 700; font-size: 19px; text-decoration: none; letter-spacing: -0.005em; padding-right: 24px; }
 .corner {
   position: relative; display: flex; align-items: center; gap: 22px;
@@ -74,9 +78,22 @@ a { color: inherit; }
 .corner .c-photos { color: #92C493; } .corner .c-rotation { color: #C79BC7; } .corner .c-about { color: #CFAE95; }
 .corner .lang { color: #A9A69F; font-size: 14px; }
 @media (max-width: 960px) {
-  .head-in { flex-direction: column; align-items: stretch; }
-  .name { padding-block: 18px 14px; align-self: flex-start; }
-  .corner { clip-path: polygon(0 22px, 30px 0, 100% 0, 100% 100%, 0 100%); padding: 30px max(28px, env(safe-area-inset-right, 0px)) 16px max(28px, env(safe-area-inset-left, 0px)); margin-left: calc(-1 * max(28px, env(safe-area-inset-left, 0px))); flex-wrap: wrap; }
+  /* On small screens the header is just the name and a menu key; the field shows through it. */
+  .head { background-image: none; border-bottom: 0; }
+  .head-in { flex-direction: column; align-items: stretch; min-height: 0; }
+  .bar { padding-block: 16px; }
+  .name { padding: 0; }
+  .key.menu-key { display: inline-flex; }
+  /* The menu folds out from under the bar: the dark diagonal panel unrolls downward. */
+  .fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.7, 0.2, 1);
+    margin-inline: calc(-1 * max(28px, env(safe-area-inset-left, 0px))) calc(-1 * max(28px, env(safe-area-inset-right, 0px))); }
+  .fold > .corner { min-height: 0; overflow: hidden; }
+  .head[data-open] .fold { grid-template-rows: 1fr; }
+  .corner { clip-path: polygon(0 22px, 30px 0, 100% 0, 100% 100%, 0 100%); margin: 0;
+    padding: 0 max(28px, env(safe-area-inset-right, 0px)) 0 max(28px, env(safe-area-inset-left, 0px)); }
+  .corner ul { flex-direction: column; gap: 4px; padding-block: 34px 20px; }
+  .corner a { font-size: 17px; padding-block: 6px; }
+  @media (prefers-reduced-motion: reduce) { .fold { transition: none; } }
 }
 
 /* ---------- Stage: hero + sections, with the thread canvas behind ---------- */
@@ -86,11 +103,11 @@ a { color: inherit; }
 .hero-in { position: relative; z-index: 1; padding-block: clamp(56px, 8vw, 112px) clamp(80px, 11vw, 150px); display: grid; gap: 20px; max-width: 34rem; }
 h1 { margin: 0; font-weight: 600; font-size: clamp(44px, 6.4vw, 80px); line-height: 1; letter-spacing: -0.03em; }
 .lede { margin: 0; font-size: clamp(19px, 2vw, 23px); line-height: 1.4; max-width: 26ch; }
-@media (max-width: 760px) { .hero-in { padding-bottom: 210px; } }
+@media (max-width: 760px) { .hero-in { padding-block: 40px 170px; } }
 
 main { position: relative; z-index: 1; }
 /* Each section's top edge is drawn by its own threads (on the canvas), not by a CSS border. */
-.sec { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: 12px 40px; padding-block: 44px 40px; }
+.sec { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: 12px 40px; padding-block: 52px 52px; }
 .sec h2 { margin: 0; font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 9px; align-self: start; padding-top: 2px; }
 .items { display: grid; gap: 26px; max-width: 40rem; }
 .item { display: block; text-decoration: none; }
@@ -108,28 +125,21 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
 .f-in p { margin: 0; max-width: 40rem; }
 .f-in .engraved { margin-bottom: 6px; }
 
-/* ---------- Prototype controls: Walkman-style keys in a diagonal graphite plate ---------- */
-.deck {
-  position: fixed; right: max(14px, env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 10;
-  background: var(--graphite); color: #E9E7E1; padding: 14px 16px 14px 34px; border-radius: 10px;
-  clip-path: polygon(22px 0, 100% 0, 100% 100%, 0 100%, 0 22px);
-  display: grid; gap: 10px; box-shadow: 0 10px 28px -14px rgb(0 0 0 / 0.5);
-}
-.deck .engraved { color: #8E8B84; }
-.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-/* Pill keys sunk into a recess, like FF / REW / PLAY / STOP. */
+/* ---------- Keys: Walkman-style pills sunk into a recess ---------- */
 .key {
   font: 600 11px/1 var(--f); letter-spacing: 0.12em; text-transform: uppercase; font-stretch: 90%;
   color: #2A2B2E; background: linear-gradient(180deg, #F2F1EC, #CFCDC6); border: 0; cursor: pointer;
   border-radius: 999px; padding: 9px 14px; display: inline-flex; align-items: center; gap: 7px;
-  box-shadow: 0 0 0 3px #1B1C1E, 0 0 0 4px rgb(255 255 255 / 0.08), inset 0 -1px 0 rgb(0 0 0 / 0.18);
+  box-shadow: 0 0 0 3px var(--recess), 0 0 0 4px rgb(255 255 255 / 0.06), inset 0 -1px 0 rgb(0 0 0 / 0.18);
   transition: transform 0.06s;
 }
 .key:active { transform: translateY(1px); }
-.key[aria-pressed="true"] { background: linear-gradient(180deg, #FFFFFF, #E2E0D9); }
+.key[aria-pressed="true"], .key[aria-expanded="true"] { background: linear-gradient(180deg, #FFFFFF, #E2E0D9); }
 .key .led { width: 8px; height: 8px; border-radius: 50%; background: #1A3B22; box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.5); }
-.key[aria-pressed="true"] .led { background: var(--led); box-shadow: 0 0 6px var(--led); }
-@media (max-width: 560px) { .deck { left: 14px; right: 14px; } }
+.key[aria-pressed="true"] .led, .key[aria-expanded="true"] .led { background: var(--led); box-shadow: 0 0 6px var(--led); }
+.key.small { padding: 7px 11px; font-size: 10px; }
+.motion { display: flex; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+.motion .engraved { margin: 0 4px 0 0; }
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -141,9 +151,13 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
   <symbol id="i-about" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.6-3.8 3.4-6 7-6s6.4 2.2 7 6"/></symbol>
 </svg>
 
+
+
+<div class="stage" id="stage">
+  <canvas id="threads" aria-hidden="true"></canvas>
 <header class="head grooves pad"><div class="wrap head-in">
-  <a class="name" href="#top">Magnus H. Kaspersen</a>
-  <nav class="corner" aria-label="Main"><ul>
+  <div class="bar"><a class="name" href="#top">Magnus H. Kaspersen</a><button type="button" class="key menu-key" id="menuKey" aria-expanded="false" aria-controls="menu"><span class="led"></span>Menu</button></div>
+  <div class="fold" id="menu"><nav class="corner" aria-label="Main"><ul>
     <li><a href="#blog"><svg class="pic c-blog"><use href="#i-blog"/></svg><span>Blog</span></a></li>
     <li><a href="#weeks"><svg class="pic c-weeks"><use href="#i-weeks"/></svg><span>Weeks</span></a></li>
     <li><a href="#projects"><svg class="pic c-projects"><use href="#i-projects"/></svg><span>Projects</span></a></li>
@@ -151,11 +165,8 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
     <li><a href="#rotation"><svg class="pic c-rotation"><use href="#i-rotation"/></svg><span>My rotation</span></a></li>
     <li><a href="#about"><svg class="pic c-about"><use href="#i-about"/></svg><span>About</span></a></li>
     <li><a class="lang" href="#top" lang="da"><span>Dansk</span></a></li>
-  </ul></nav>
+  </ul></nav></div>
 </div></header>
-
-<div class="stage" id="stage">
-  <canvas id="threads" aria-hidden="true"></canvas>
   <section class="hero pad" aria-labelledby="hello"><div class="wrap">
     <div class="hero-in" id="heroText">
       <span class="engraved">Week 46 &nbsp;2026</span>
@@ -188,15 +199,14 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
   <span class="engraved">Contact</span>
   <p>Write to me at hello@magnushkaspersen.com or use the contact form.</p>
   <p>Follow new writing by RSS, and I'm also on GitHub.</p>
+  <div class="motion" role="group" aria-label="Motion">
+    <span class="engraved">Motion</span>
+    <button type="button" class="key small" id="play" aria-pressed="true"><span class="led"></span>Play</button>
+    <button type="button" class="key small" id="stop" aria-pressed="false">Stop</button>
+  </div>
 </div></footer>
 
-<div class="deck" role="group" aria-label="Prototype controls">
-  <span class="engraved">Motion</span>
-  <div class="row">
-    <button type="button" class="key" id="play" aria-pressed="true"><span class="led"></span>Play</button>
-    <button type="button" class="key" id="stop" aria-pressed="false">Stop</button>
-  </div>
-</div>
+
 
 <script>
 (function () {
@@ -210,7 +220,7 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
   SECTIONS.forEach(function (s) { s.n = (4 + s.items * 4) * STRANDS; });
 
   var stage = document.getElementById('stage'), cv = document.getElementById('threads'), g = cv.getContext('2d');
-  var W = 0, H = 0, DPR = 1, playing = true, visible = true, t0 = performance.now(), heroH = 0, textBottom = 0, padL = 28;
+  var W = 0, H = 0, DPR = 1, playing = true, visible = true, t0 = performance.now(), heroH = 0, headH = 0, textBottom = 0, padL = 28;
   var targets = {};
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -222,13 +232,15 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
     W = Math.round(r.width); H = Math.round(r.height);
     cv.width = W * DPR; cv.height = H * DPR; g.setTransform(DPR, 0, 0, DPR, 0, 0);
     heroH = document.querySelector('.hero').offsetHeight;
+    headH = document.querySelector('.head').offsetHeight;
     var ht = document.getElementById('heroText').getBoundingClientRect();
     textBottom = ht.bottom - r.top - parseFloat(getComputedStyle(document.getElementById('heroText')).paddingBottom);
     padL = document.querySelector('main .wrap').getBoundingClientRect().left - r.left;
     // Where each section's threads come to rest: the top edge of its section, or the footer.
     SECTIONS.forEach(function (s) {
       var el = document.querySelector('[data-thread="' + s.k + '"]');
-      targets[s.k] = el ? (el.getBoundingClientRect().top - r.top) : H - 2;
+      if (el) { var b = el.getBoundingClientRect(); targets[s.k] = { top: b.top - r.top, h: b.height }; }
+      else targets[s.k] = null;
     });
   }
 
@@ -249,6 +261,10 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
     var l = pts[pts.length - 1]; g.lineTo(l[0], l[1]); g.stroke();
   }
 
+  function hexToRgb(h) {
+    h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+    var v = parseInt(h, 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255].join(',');
+  }
   function smoothstep(e0, e1, x) { var t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
 
   // Keep the headline clear: fade whatever is drawn behind the hero text.
@@ -257,9 +273,17 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
     var left = r.left - sr.left, right = r.right - sr.left, top = r.top - sr.top, bottom = textBottom + 10;
     g.save();
     g.globalCompositeOperation = 'destination-out';
-    var grd = g.createLinearGradient(left, 0, right + 80, 0);
-    grd.addColorStop(0, 'rgba(0,0,0,0.97)'); grd.addColorStop(0.8, 'rgba(0,0,0,0.92)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = grd; g.fillRect(0, top - 30, right + 80, bottom - top + 60);
+    if (W < 760) {
+      // Phones: the field shows faintly behind the text, fading in above and below it.
+      var v = g.createLinearGradient(0, top - 40, 0, bottom + 50);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(0.2, 'rgba(0,0,0,0.75)');
+      v.addColorStop(0.8, 'rgba(0,0,0,0.75)'); v.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = v; g.fillRect(0, top - 40, W, bottom - top + 90);
+    } else {
+      var grd = g.createLinearGradient(left, 0, right + 80, 0);
+      grd.addColorStop(0, 'rgba(0,0,0,0.97)'); grd.addColorStop(0.8, 'rgba(0,0,0,0.92)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grd; g.fillRect(0, top - 30, right + 80, bottom - top + 60);
+    }
     g.restore();
   }
 
@@ -269,7 +293,9 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
   function contours(time, C) {
     var mobile = W < 760, lines = 84, list = [];
     // On phones the field sits in the space below the text instead of behind it.
-    var yOff = mobile ? textBottom + 16 : 0, Hh = mobile ? Math.max(160, heroH - textBottom - 24) : heroH;
+    // Desktop: the field fills the hero. Mobile: it is taller and runs from the very top,
+    // behind the header and the text, down through the hero.
+    var yOff = mobile ? 0 : headH, Hh = mobile ? headH + heroH : heroH;
     SECTIONS.forEach(function (s) { for (var j = 0; j < Math.round(s.n / STRANDS / 2); j++) list.push(s.k); });
     var dyedAt = {}; for (var d = 0; d < list.length; d++) dyedAt[Math.round(6 + d * (lines - 12) / list.length)] = list[d];
     g.lineCap = 'round'; g.lineJoin = 'round';
@@ -277,10 +303,12 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
       var key = dyedAt[k], f = k / (lines - 1) - 0.5, pts = [];
       for (var x = -20; x <= W + 20; x += 14) {
         var u = x / W;
-        var cA = Hh * (0.3 + 0.14 * Math.sin(u * 3.1 + time * 0.12));
-        var cB = Hh * (0.66 + 0.14 * Math.sin(u * 2.3 - time * 0.1 + 1.7));
-        var sA = Hh * (0.06 + 0.7 * Math.pow(0.5 + 0.5 * Math.sin(u * 4.2 + time * 0.16), 2));
-        var sB = Hh * (0.05 + 0.6 * Math.pow(0.5 + 0.5 * Math.cos(u * 3.3 - time * 0.14), 2));
+        // Phones: the bundles spread over the whole height, from behind the header down.
+        var ca = mobile ? 0.16 : 0.3, cb = mobile ? 0.74 : 0.66, sp = mobile ? 1.35 : 1;
+        var cA = Hh * (ca + 0.14 * Math.sin(u * 3.1 + time * 0.12));
+        var cB = Hh * (cb + 0.14 * Math.sin(u * 2.3 - time * 0.1 + 1.7));
+        var sA = Hh * sp * (0.06 + 0.7 * Math.pow(0.5 + 0.5 * Math.sin(u * 4.2 + time * 0.16), 2));
+        var sB = Hh * sp * (0.05 + 0.6 * Math.pow(0.5 + 0.5 * Math.cos(u * 3.3 - time * 0.14), 2));
         var m = 0.5 + 0.5 * Math.sin(u * 2.6 + time * 0.09 + f * 2.2);
         var y = yOff + (1 - m) * (cA + sA * f) + m * (cB - sB * f) + Math.sin(u * 14 + k * 0.4) * 1.5;
         pts.push([x, y]);
@@ -289,13 +317,27 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
       g.globalAlpha = key ? 0.8 : 0.2; g.lineWidth = key ? 1.6 : 1;
       smooth(pts);
     }
-    // Section lines: each section's own threads, in its single colour, across the page.
-    SECTIONS.forEach(function (s) {
-      g.strokeStyle = C[s.k];
-      for (var j = 0; j < s.n / STRANDS; j++) {
-        var ty = targets[s.k] + (j / Math.max(1, s.n / STRANDS - 1) - 0.5) * (2.2 + s.items * 1.6), pts = [];
-        for (var x = padL; x <= W; x += 30) pts.push([x, ty + Math.sin(x / 80 + time * 0.4 + j) * 1.4]);
-        g.globalAlpha = 0.55; g.lineWidth = 1; smooth(pts);
+    // Section bands: behind each section, a soft band of that section's threads in its single
+    // colour drifts across, fading in from the left so it stays in the background. The more
+    // the section holds, the wider and fuller the band.
+    SECTIONS.forEach(function (s, si) {
+      var t = targets[s.k]; if (!t) return;
+      var n = s.n / STRANDS, width = 10 + s.items * 18;
+      var rgb = hexToRgb(C[s.k]);
+      var grd = g.createLinearGradient(padL, 0, W, 0);
+      grd.addColorStop(0, 'rgba(' + rgb + ',0)');
+      grd.addColorStop(mobile ? 0.25 : 0.45, 'rgba(' + rgb + ',0.32)');
+      grd.addColorStop(1, 'rgba(' + rgb + ',0.7)');
+      g.strokeStyle = grd; g.lineWidth = 1;
+      for (var j = 0; j < n; j++) {
+        var o = (j / Math.max(1, n - 1) - 0.5) * width, pts = [];
+        for (var x = -10; x <= W + 10; x += 20) {
+          var u = x / W;
+          var y = t.top + t.h * (0.2 + 0.6 * u) + Math.sin(u * 3.4 + time * 0.14 + si) * t.h * 0.12
+                + o * (0.7 + 0.3 * Math.sin(u * 2.2 - time * 0.1)) + Math.sin(u * 11 + j) * 1.2;
+          pts.push([x, y]);
+        }
+        smooth(pts);
       }
     });
     g.globalAlpha = 1;
@@ -310,6 +352,13 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { frame(performance.now()); });
   if (document.fonts) document.fonts.ready.then(function () { measure(); frame(performance.now()); });
 
+  var head = document.querySelector('.head'), menuKey = document.getElementById('menuKey');
+  menuKey.addEventListener('click', function () {
+    var open = !head.hasAttribute('data-open');
+    if (open) head.setAttribute('data-open', ''); else head.removeAttribute('data-open');
+    menuKey.setAttribute('aria-expanded', String(open));
+    setTimeout(function () { measure(); frame(performance.now()); }, 340);
+  });
   var play = document.getElementById('play'), stop = document.getElementById('stop');
   function setPlaying(v) { playing = v; play.setAttribute('aria-pressed', String(v)); stop.setAttribute('aria-pressed', String(!v)); }
   if (reduce) setPlaying(false);
