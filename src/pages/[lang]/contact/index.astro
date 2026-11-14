@@ -67,14 +67,16 @@ const settings = await getSettings();
     font: inherit; color: var(--ink); background: var(--paper-deep); border: 0;
     border-bottom: 1.5px solid var(--ink); padding: 0.65rem 0.75rem; width: 100%; border-radius: 0;
   }
-  input:focus, textarea:focus { border-bottom-color: var(--pine); outline: 2px solid var(--pine); outline-offset: 0; }
+  input:focus, textarea:focus { border-bottom-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 0; }
   textarea { resize: vertical; }
   button {
     justify-self: start; font: 600 1rem/1 var(--f-text); color: var(--paper); background: var(--ink);
     border: 0; padding: 0.9rem 1.4rem; cursor: pointer;
+    border-radius: 6px; box-shadow: 0 2px 0 var(--hole-shade);
   }
-  button:hover { background: var(--pine); }
+  button:active { box-shadow: 0 1px 0 var(--hole-shade); }
+  button:hover { background: var(--accent); }
   .hp { position: absolute; left: -9999px; }
-  .error { max-width: 36rem; margin-bottom: 1.5rem; padding: 0.8rem 1rem; border-left: 3px solid var(--pine); background: var(--paper-deep); }
+  .error { max-width: 36rem; margin-bottom: 1.5rem; padding: 0.8rem 1rem; border-left: 3px solid var(--accent); background: var(--paper-deep); }
   .alt { margin-top: 2.5rem; color: var(--muted); }
 </style>

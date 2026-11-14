@@ -3,6 +3,7 @@ import Base from '~/layouts/Base.astro';
 import PageHead from '~/components/PageHead.astro';
 import WeeksGrid from '~/components/WeeksGrid.astro';
 import Empty from '~/components/Empty.astro';
+import ReadMark from '~/components/ReadMark.astro';
 import { t, langPaths, isoWeek, weekLabel, weekRange, isoDate, type Lang } from '~/i18n';
 import { getWeeks, weekText, weekAnchor } from '~/lib/content';
 
@@ -27,8 +28,9 @@ const rows = weeks.map((w) => {
   {weeks.length === 0 && <Empty text={t(lang, 'empty.weeks')} />}
   <ol class="log">
     {rows.map(({ entry, year, showYear }) => (
-      <li class="row" id={weekAnchor(entry.data.date)}>
+      <li class="row" id={weekAnchor(entry.data.date)} data-week={weekAnchor(entry.data.date)}>
         <div class="margin">
+          <ReadMark />
           {showYear && <span class="year num">{year}</span>}
           <span class="margin-title">{weekLabel(lang, entry.data.date)}</span>
           <time class="num" datetime={isoDate(entry.data.date)}>{weekRange(lang, entry.data.date)}</time>
@@ -39,11 +41,16 @@ const rows = weeks.map((w) => {
   </ol>
 </Base>
 
+<script>
+  import { tickWeeks } from '~/lib/readmarks';
+  document.addEventListener('astro:page-load', () => { if (document.querySelector('[data-week]')) tickWeeks(); });
+</script>
+
 <style>
   .log { list-style: none; margin: 0; padding: 0; display: grid; gap: 2.25rem; }
   li { scroll-margin-top: 2rem; }
   .year { margin-bottom: 0.5rem; }
   /* Every week is equal; the page title is the only loud element. */
   .text { font-size: 1.25rem; line-height: 1.5; max-width: 34em; text-wrap: pretty; }
-  li:target .text { text-decoration: underline; text-decoration-color: var(--pine); text-decoration-thickness: 3px; text-underline-offset: 0.2em; }
+  li:target .text { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 3px; text-underline-offset: 0.2em; }
 </style>

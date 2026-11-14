@@ -31,7 +31,10 @@ const rss = url(lang, 'rss.xml').slice(0, -1);
       </form>
     )}
 
-    <p class="num small">© {year} Magnus H. Kaspersen</p>
+    <p class="small-row">
+      <span class="num small">© {year} Magnus H. Kaspersen</span>
+      <button type="button" class="case-toggle" data-case-toggle aria-expanded="false" aria-keyshortcuts="G">{t(lang, 'case.open')}</button>
+    </p>
   </div>
 </footer>
 
@@ -50,11 +53,19 @@ const rss = url(lang, 'rss.xml').slice(0, -1);
     flex: 1 1 14rem; min-width: 0; font: inherit; color: var(--ink); background: transparent;
     border: 0; border-bottom: 1.5px solid var(--ink); padding: 0.4rem 0;
   }
-  input[type='email']:focus { outline: none; border-bottom-color: var(--pine); }
+  input[type='email']:focus { outline: none; border-bottom-color: var(--accent); }
   button {
     font: 600 0.95rem/1 var(--f-text); color: var(--paper); background: var(--ink); border: 0;
     padding: 0.7rem 1.1rem; cursor: pointer;
+    border-radius: 6px; box-shadow: 0 2px 0 var(--hole-shade);
   }
-  button:hover { background: var(--pine); }
+  button:active { box-shadow: 0 1px 0 var(--hole-shade); }
+  button:hover { background: var(--accent); }
   .small { font-size: 0.75rem; }
+  .small-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; }
+  .case-toggle {
+    font: 500 0.75rem/1 var(--f-text); color: var(--muted); background: transparent;
+    border: 1px dashed var(--accent-ghost); border-radius: 6px; padding: 0.45rem 0.65rem; cursor: pointer; box-shadow: none;
+  }
+  .case-toggle:hover, .case-toggle[aria-expanded='true'] { color: var(--accent); border-color: var(--accent); background: transparent; }
 </style>

@@ -4,7 +4,7 @@ A bilingual (English / Danish) digital home. The brief and every design decision
 
 - **Astro 7**, static by default, deployed to **Cloudflare Workers**
 - **Keystatic** for editing content in a web UI (no database: content lives as files in this repo)
-- Pine palette, **Schibsted Grotesk** headlines, **IBM Plex Sans/Mono** text, all fonts self-hosted
+- *Strawberry Thief* palette (indigo and madder on linen), **Schibsted Grotesk** headlines, **IBM Plex Sans/Mono** text, all fonts self-hosted
 - Two signature moments: the **underline → heading** page transition and the **reading line** on essays
 
 > All content in `src/content/` is sample copy, and the photos are generated placeholders. Replace them before launch.
@@ -24,7 +24,7 @@ Open **/keystatic**. In local dev it edits the files in `src/content/`. In produ
 
 | In Keystatic | Lives in | Notes |
 |---|---|---|
-| Writing | `src/content/posts/*.mdoc` | Choose **Essay** to get the reading line. Give the English and Danish versions the same *translation key* to link them |
+| Blog | `src/content/posts/*.mdoc` | Choose **Essay** to get the reading line. Select words and use **Sidenote** to put a note in the margin beside them. Give the English and Danish versions the same *translation key* to link them |
 | Projects | `src/content/projects/*.mdoc` | Tick *Show on the homepage* to feature a project |
 | Photos | `src/content/photos/*.yaml` + `src/assets/photos/` | Optimised to WebP at build time |
 | Bookshelf & media | `src/content/books/*.yaml` | Status: currently / up next / finished |

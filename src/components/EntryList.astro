@@ -7,6 +7,7 @@
  */
 import { isoDate, isoWeek, weekLabel, type Lang } from '~/i18n';
 import { ruleName } from '~/lib/content';
+import ReadMark from './ReadMark.astro';
 
 interface Item { id: string; href: string; title: string; date?: Date; year?: number; summary?: string }
 interface Heading { id: string; label: string; href: string }
@@ -24,8 +25,9 @@ const rows = items.map((item) => {
 
 <ol class="entries">
   {rows.map((item, i) => (
-    <li class:list={['row', { 'has-heading': heading && i === 0 }]}>
+    <li class:list={['row', { 'has-heading': heading && i === 0 }]} data-href={collection === 'posts' ? item.href : undefined}>
       <div class="margin">
+        {collection === 'posts' && <ReadMark />}
         {heading && i === 0 && <a id={heading.id} class="margin-title heading" href={heading.href}>{heading.label}</a>}
         {item.yearLabel && <span class="margin-title">{item.yearLabel}</span>}
         {item.date
@@ -43,6 +45,11 @@ const rows = items.map((item) => {
   ))}
 </ol>
 
+<script>
+  import { tickRead } from '~/lib/readmarks';
+  document.addEventListener('astro:page-load', () => tickRead());
+</script>
+
 <style>
   .entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.6rem; }
   .column { display: grid; gap: 0.45rem; }
@@ -51,7 +58,7 @@ const rows = items.map((item) => {
     font-family: var(--f-display); font-weight: 600; font-size: var(--t-title);
     letter-spacing: var(--track); line-height: 1.2; padding-bottom: 0.3rem;
   }
-  .ul { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--pine); transition: height 0.15s; }
+  .ul { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--accent); transition: height 0.15s; }
   .column > a:hover .ul { height: 4px; }
   p { color: var(--muted); max-width: 34rem; }
   .heading { margin-bottom: 0.35rem; }

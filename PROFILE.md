@@ -103,7 +103,7 @@ Each one repairs a small gap someone else left. That's a right-to-repair instinc
 | **Motion** | A few signature moments | Mostly still. One or two memorable interactions (e.g. the homepage name/intro, the language switch, or page transitions). Everything else stays calm |
 
 **Visual decisions (from three rounds of type/colour review):**
-- **Colour:** Pine. Light: paper `#EEF0EB`, ink `#121614`, accent `#1F6B47`, muted `#66706B`. Dark: paper `#101411`, ink `#E5EAE6`, accent `#62C795`, muted `#8E9893`
+- **Colour:** *Strawberry Thief* (Morris's indigo and madder; replaced pine in Nov 2026). Light: linen `#ECEBE6`, indigo ink `#1C2233`, indigo `#2C4A8C`, madder `#A9362B`, muted `#5D6170`. Dark: `#12141C`, `#E7E6EF`, `#8FA8E8`, `#E06A5C`, `#9A9CAA`. Indigo is the working colour; madder only marks this week's light and marks of use
 - **Text:** IBM Plex Sans for body copy, IBM Plex Mono for dates, navigation and labels
 - **Headline:** **Schibsted Grotesk** (bold weights) for the name, headlines and section titles, with letter spacing `+0.05rem`
 
@@ -113,17 +113,26 @@ Each one repairs a small gap someone else left. That's a right-to-repair instinc
 
 - **Weekly notebook:** every page has a left margin column for context (week numbers, dates, section names, the reading line) and a ~42rem reading column. Left aligned; the right side of wide screens stays open
 - **Hero:** the latest week-log sentence as the big headline. The margin says "Week 46, 2026": the ISO week of that entry, since Danes date things by week number
-- **Weeks grid (flair):** the year as 52 small squares under the hero label (and on the Writing page). Weeks with a post or photo are pine and link to it; this week breathes; a nod to *Four Thousand Weeks*
-- **Print texture (flair):** a fine fixed paper grain over the page, and every pine mark printed twice, the second pass a pixel off, like a risograph
-- **Pine** only on underlines, rules and the reading line. **Plex Mono** only for numbers in the margin
+- **Weeks grid (flair):** the year as 52 small squares under the hero label (and on the Writing page). Drawn as a speaker grille: weeks with something new are lit indigo and link to it; this week is a madder indicator light that glows; pointing at a week shows it in the readout line below; a nod to *Four Thousand Weeks*
+- **Print texture (flair):** a fine fixed paper grain over the page, and every indigo mark printed twice, the second pass a pixel off, like a risograph
+- **Indigo** only on underlines, rules, lit weeks and the reading line; **madder** only on this week and read marks. **Plex Mono** only for numbers in the margin
 - **Avoided on purpose:** all-caps labels, an accent-coloured word in headlines, `→` on links, dot-joined meta strings, rounded cards
 
 ## Signature moments (launch)
 
-1. **Underline → heading**: when a post link is clicked, its pine underline lifts off and stretches into the rule under the post title. Going back reverses it. Built with the View Transitions API (Astro `<ClientRouter />`), with a plain page load as fallback
-2. **Reading line**: on essays and long notes, a thin pine line with a dot at its tip draws down the margin as you read
+1. **Underline → heading**: when a post link is clicked, its indigo underline lifts off and stretches into the rule under the post title. Going back reverses it. Built with the View Transitions API (Astro `<ClientRouter />`), with a plain page load as fallback
+2. **Reading line**: on essays and long notes, a thin indigo line with a dot at its tip draws down the margin as you read
 
-Both respect `prefers-reduced-motion` (no animation; the end state is shown). Considered and dropped: name settling in, living pine dot, bookshelf spines.
+Both respect `prefers-reduced-motion` (no animation; the end state is shown). Considered and dropped: name settling in, living dot, bookshelf spines.
+
+## Details from the reading (Nov 2026)
+
+- **Indicator light:** the dot after the name is a steady indigo light
+- **EN/DA slide switch:** the language link is a two-position switch; the knob slides, then the page changes
+- **Keys:** buttons press down a pixel when used
+- **Read marks:** a hand-drawn madder tick in the margin beside posts and weeks this visitor has already read (stored only in their browser)
+- **Sidenotes:** in Keystatic, select words in a post and add a Sidenote; it sits in the margin beside the line, and opens in place on phones
+- **Open the case:** a footer button (or the G key) shows how the page is built: grid outlines, baseline, heading levels and a card with the grid measured live and the palette
 
 ## Type hierarchy
 
@@ -134,7 +143,7 @@ Both respect `prefers-reduced-motion` (no animation; the end state is shown). Co
 | 3 | Reading text | IBM Plex Sans 400, 17px |
 | Margin | Context only: section names, week labels, dates | IBM Plex Sans 500, 15px; numbers in Plex Mono |
 
-The wordmark stays Schibsted 800 (it's the logo). Book titles in running text are italic. Pull quotes are italic with a pine rule, never larger than a subhead.
+The wordmark stays Schibsted 800 (it's the logo). Book titles in running text are italic. Pull quotes are italic with an indigo rule, never larger than a subhead.
 
 ## Ideas for later
 

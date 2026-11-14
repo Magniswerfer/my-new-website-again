@@ -1,0 +1,65 @@
+---
+/**
+ * A sidenote, written in a post as
+ *   {% sidenote note="The note text." %}words it belongs to{% /sidenote %}
+ * On wide screens the note sits in the margin beside its line, numbered.
+ * On narrow screens the number is a button that opens the note in place.
+ */
+interface Props { note: string }
+const { note } = Astro.props;
+---
+
+<span class="sn"><span class="sn-anchor"><slot /></span><button type="button" class="sn-ref" aria-expanded="false" aria-label="Note"></button><span class="sn-note" role="note">{note}</span></span>
+
+<script>
+  // Narrow screens: the number opens/closes the note. Wide screens: it
+  // briefly lights the note in the margin so the eye can find it.
+  document.addEventListener('click', (e) => {
+    const ref = (e.target as Element).closest<HTMLButtonElement>('.sn-ref');
+    if (!ref) return;
+    const sn = ref.closest<HTMLElement>('.sn')!;
+    if (matchMedia('(max-width: 52rem)').matches) {
+      const open = !('open' in sn.dataset);
+      if (open) sn.dataset.open = ''; else delete sn.dataset.open;
+      ref.setAttribute('aria-expanded', String(open));
+    } else {
+      sn.classList.remove('flash'); void sn.offsetWidth; sn.classList.add('flash');
+    }
+  });
+</script>
+
+<style>
+  .sn-anchor { text-decoration: underline dotted var(--accent-ghost); text-decoration-thickness: 1.5px; text-underline-offset: 0.2em; }
+  .sn-ref {
+    counter-increment: sidenote;
+    font: 500 0.7em/1 var(--f-num); color: var(--accent); background: none; border: 0;
+    padding: 0 0.15em; margin: 0; vertical-align: super; cursor: pointer;
+  }
+  .sn-ref::after { content: counter(sidenote); }
+  .sn-note {
+    display: block; font-size: 0.8125rem; line-height: 1.45; color: var(--muted);
+    font-style: normal; font-weight: 400; transition: color 0.2s;
+  }
+  .sn-note::before { content: counter(sidenote) '  '; white-space: pre; font-family: var(--f-num); color: var(--accent); }
+  .sn:hover .sn-note, .sn:focus-within .sn-note { color: var(--ink); }
+  .sn:hover .sn-anchor { text-decoration-color: var(--accent); }
+  .sn.flash .sn-note { animation: flash 0.9s var(--ease); }
+  @keyframes flash { 0% { color: var(--accent); } 100% { color: var(--muted); } }
+
+  @media (min-width: 52.01rem) {
+    /* The margin sits left of the reading column; clear the reading line. */
+    .sn-note {
+      /* Inline, so its static position stays on the anchor's line. */
+      display: inline;
+      position: absolute;
+      left: calc(-1 * (var(--margin) + var(--gap)) + 1.75rem);
+      width: calc(var(--margin) - 1.75rem);
+      margin-top: 0.15rem;
+    }
+  }
+  @media (max-width: 52rem) {
+    .sn-note { display: none; margin: 0.5rem 0 0.25rem; padding-left: 0.9rem; border-left: 2px solid var(--accent); }
+    .sn[data-open] .sn-note { display: block; }
+  }
+  @media (prefers-reduced-motion: reduce) { .sn.flash .sn-note { animation: none; } }
+</style>

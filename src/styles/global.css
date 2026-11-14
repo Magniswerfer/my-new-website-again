@@ -17,23 +17,30 @@
    names (+0.05rem). IBM Plex Sans for reading. IBM Plex Mono only for
    numbers in the margin, where even figures help.
 
-   Colour: pine appears only on underlines, rules and the reading line.
+   Colour: indigo (accent) on underlines, rules, lit weeks and the reading
+   line; madder only on this week's light and marks of use.
    ------------------------------------------------------------------ */
 :root {
-  --paper: #eef0eb;
-  --paper-deep: #e4e8e1;
-  --ink: #121614;
-  --muted: #5c6661;
-  --pine: #1f6b47;
-  --rule: rgb(18 22 20 / 0.14);
-  --selection: rgb(31 107 71 / 0.18);
-  --pine-ghost: rgb(31 107 71 / 0.32);
-  /* Instrument details (Braun-style): indicator lights, perforations, switch. */
-  --signal: var(--pine);
-  --glow: rgb(31 107 71 / 0.45);
-  --hole: #d5dad2;
-  --hole-shade: rgb(18 22 20 / 0.22);
-  --knob: #fbfbf8;
+  /* Strawberry Thief: William Morris's indigo and madder on linen.
+     Indigo is the one working colour (links, rules, lit weeks, the reading
+     line); madder appears only as this week's light and marks of use. */
+  --paper: #ecebe6;
+  --paper-deep: #e2e1db;
+  --ink: #1c2233;
+  --muted: #5d6170;
+  --accent: #2c4a8c;
+  --madder: #a9362b;
+  --rule: rgb(28 34 51 / 0.14);
+  --selection: rgb(44 74 140 / 0.18);
+  --accent-ghost: rgb(44 74 140 / 0.3);
+  /* Instrument details: indicator lights, perforations, switch. */
+  --signal: var(--accent);
+  --glow: rgb(44 74 140 / 0.4);
+  --now: var(--madder);
+  --now-glow: rgb(169 54 43 / 0.5);
+  --hole: #d6d6d0;
+  --hole-shade: rgb(28 34 51 / 0.22);
+  --knob: #fafaf8;
   --grain-opacity: 0.09;
   --grain-blend: multiply;
 
@@ -64,18 +71,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #101411;
-    --paper-deep: #171c18;
-    --ink: #e5eae6;
-    --muted: #8e9893;
-    --pine: #62c795;
-    --rule: rgb(229 234 230 / 0.14);
-    --selection: rgb(98 199 149 / 0.25);
-    --pine-ghost: rgb(98 199 149 / 0.3);
-    --glow: rgb(98 199 149 / 0.55);
-    --hole: #232a25;
+    --paper: #12141c;
+    --paper-deep: #1a1d27;
+    --ink: #e7e6ef;
+    --muted: #9a9caa;
+    --accent: #8fa8e8;
+    --madder: #e06a5c;
+    --rule: rgb(231 230 239 / 0.14);
+    --selection: rgb(143 168 232 / 0.25);
+    --accent-ghost: rgb(143 168 232 / 0.3);
+    --glow: rgb(143 168 232 / 0.5);
+    --now-glow: rgb(224 106 92 / 0.55);
+    --hole: #242733;
     --hole-shade: rgb(0 0 0 / 0.55);
-    --knob: #46504a;
+    --knob: #4a4d5c;
     --grain-opacity: 0.06;
     --grain-blend: screen;
     color-scheme: dark;
@@ -127,11 +136,15 @@ h2 { font-size: var(--t-title); }
 h3 { font-size: var(--t-title); }
 p { margin: 0; text-wrap: pretty; }
 
-a { color: inherit; text-decoration-color: var(--pine); text-decoration-thickness: 1.5px; text-underline-offset: 0.2em; }
+a { color: inherit; text-decoration-color: var(--accent); text-decoration-thickness: 1.5px; text-underline-offset: 0.2em; }
 /* Risograph misregistration: pine marks get a faint second pass, a pixel off. */
-.offprint { box-shadow: 1.5px 1px 0 var(--pine-ghost); }
+.offprint { box-shadow: 1.5px 1px 0 var(--accent-ghost); }
 a:hover { text-decoration-thickness: 3px; }
-:focus-visible { outline: 2px solid var(--pine); outline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* Keys: buttons press down a pixel when used, like a physical key. */
+button { transition: transform 0.06s, box-shadow 0.06s; }
+button:active { transform: translateY(1px); }
 
 .num { font-family: var(--f-num); font-size: var(--t-small); font-variant-numeric: tabular-nums; color: var(--muted); }
 .muted { color: var(--muted); }
@@ -151,13 +164,13 @@ a:hover { text-decoration-thickness: 3px; }
   column-gap: var(--gap);
   align-items: start;
 }
-.row > .margin { min-width: 0; display: grid; gap: 0.15rem; padding-top: 0.3rem; }
+.row > .margin { min-width: 0; display: grid; gap: 0.15rem; padding-top: 0.3rem; position: relative; }
 .row > .column { min-width: 0; }
 .margin-title {
   font-family: var(--f-text); font-weight: 500; font-size: 0.9375rem;
   letter-spacing: 0; line-height: 1.4; text-decoration: none; color: var(--ink);
 }
-a.margin-title:hover { text-decoration: underline; text-decoration-color: var(--pine); }
+a.margin-title:hover { text-decoration: underline; text-decoration-color: var(--accent); }
 @media (max-width: 52rem) {
   .row { grid-template-columns: minmax(0, 1fr); column-gap: 0; }
   .row > .margin { padding-top: 0; margin-bottom: 0.5rem; grid-auto-flow: column; justify-content: start; gap: 0.75rem; align-items: baseline; }
@@ -167,11 +180,11 @@ a.margin-title:hover { text-decoration: underline; text-decoration-color: var(--
 .section { margin-top: var(--block); }
 
 /* Long-form text (Markdoc output wraps itself in an <article>) */
-.prose { display: grid; gap: 1.1em; }
+.prose { display: grid; gap: 1.1em; position: relative; counter-reset: sidenote; }
 .prose > article { display: contents; }
 .prose h2 { font-size: var(--t-title); margin-top: 1.4em; }
 .prose blockquote {
-  margin: 0.3em 0; padding-left: 1.25rem; border-left: 2px solid var(--pine);
+  margin: 0.3em 0; padding-left: 1.25rem; border-left: 2px solid var(--accent);
   font-style: italic; font-size: 1.25rem; line-height: 1.5;
 }
 .prose code { font-family: var(--f-num); font-size: 0.9em; background: var(--paper-deep); padding: 0.1em 0.3em; }

@@ -3,6 +3,7 @@ import { ClientRouter } from 'astro:transitions';
 import '~/styles/global.css';
 import Header from '~/components/Header.astro';
 import Footer from '~/components/Footer.astro';
+import CaseView from '~/components/CaseView.astro';
 import { t, other, url, type Lang } from '~/i18n';
 
 interface Props {
@@ -33,8 +34,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <link rel="alternate" type="application/rss+xml" title={`Magnus H. Kaspersen (${lang.toUpperCase()})`} href={url(lang, 'rss.xml').slice(0, -1)} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />
-    <meta name="theme-color" content="#eef0eb" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#101411" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ecebe6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#12141c" media="(prefers-color-scheme: dark)" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:locale" content={lang === 'da' ? 'da_DK' : 'en_GB'} />
@@ -48,6 +49,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       <slot />
     </main>
     <Footer lang={lang} />
+    <CaseView lang={lang} />
   </body>
 </html>
 

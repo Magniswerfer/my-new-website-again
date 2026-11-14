@@ -1,4 +1,15 @@
+import { createElement } from 'react';
 import { config, collection, singleton, fields } from '@keystatic/core';
+import { mark } from '@keystatic/core/content-components';
+
+// Select words in a post and turn them into a sidenote: the note appears in
+// the margin beside them on wide screens, and opens in place on phones.
+const sidenote = mark({
+  label: 'Sidenote',
+  icon: createElement('span', { 'aria-hidden': true, style: { fontWeight: 600 } }, '¹'),
+  schema: { note: fields.text({ label: 'Note', multiline: true }) },
+  className: () => 'sidenote-anchor',
+});
 
 const lang = fields.select({
   label: 'Language',
@@ -87,7 +98,7 @@ export default config({
         summary: fields.text({ label: 'Summary', multiline: true }),
         translationKey,
         draft: fields.checkbox({ label: 'Draft (hidden from the site)', defaultValue: false }),
-        content: fields.markdoc({ label: 'Content' }),
+        content: fields.markdoc({ label: 'Content', components: { sidenote } }),
       },
     }),
 

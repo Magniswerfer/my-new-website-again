@@ -35,6 +35,14 @@ const alternate = translation ? url(translation.data.lang, 'blog', translation.i
   </Article>
 </Base>
 
+<script>
+  import { markRead } from '~/lib/readmarks';
+  // Scripts stay loaded across page transitions, so only act on blog posts.
+  document.addEventListener('astro:page-load', () => {
+    if (/^\/(en|da)\/blog\/[^/]+\/?$/.test(location.pathname)) markRead();
+  });
+</script>
+
 <style>
   .translation { margin-top: var(--block); font-size: 0.95rem; }
 </style>
