@@ -19,4 +19,5 @@ const { text, plain = false, pose = 'beanbag' } = Astro.props;
   .empty { color: var(--soft); max-width: 40rem; }
   .nap { display: flex; align-items: center; gap: 20px; }
   .nap :global(.nap-avatar) { flex: none; width: 170px; margin: -36px -20px -36px -34px; }
+  @media (max-width: 560px) { .nap { margin-top: 40px; } .nap :global(.nap-avatar) { width: 140px; margin: -24px -12px -30px -22px; } }
 </style>
