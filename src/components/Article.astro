@@ -2,8 +2,7 @@
 /**
  * Post/project layout. The heading sits in the contour field; the label
  * column holds the context (kind, week, date, reading time) and, on essays,
- * the reading line. The rule under the title is the target of the
- * underline → heading transition.
+ * the reading line.
  */
 import ReadingLine from './ReadingLine.astro';
 import Icon, { type IconName } from './Icon.astro';
@@ -11,18 +10,16 @@ import Icon, { type IconName } from './Icon.astro';
 interface Props {
   margin: string[];
   title: string;
-  ruleName: string;
   icon: IconName;
   readingLine?: boolean;
 }
-const { margin, title, ruleName, icon, readingLine = false } = Astro.props;
+const { margin, title, icon, readingLine = false } = Astro.props;
 ---
 
 <header class="a-head" data-field>
   <div class="text" data-field-text>
     <span class="engraved kicker"><Icon name={icon} />{margin.map((m) => <span>{m}</span>)}</span>
     <h1>{title}</h1>
-    <div class="rule" transition:name={ruleName}></div>
   </div>
 </header>
 
@@ -40,7 +37,6 @@ const { margin, title, ruleName, icon, readingLine = false } = Astro.props;
   .kicker { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
   .kicker .pic { width: 16px; height: 16px; }
   h1 { font-size: clamp(2.4rem, 1.5rem + 3.2vw, 4rem); }
-  .rule { height: 3px; width: 100%; max-width: 40rem; background: var(--accent); border-radius: 2px; }
   /* Prose lines up with the heading; the reading line runs in the left gutter. */
   .article { display: block; position: relative; }
   .article > .margin { position: absolute; top: 0; bottom: 0; left: calc(-1 * var(--gutter-l) + 8px); width: 12px; padding: 0; display: block; margin: 0; }

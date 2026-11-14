@@ -3,7 +3,7 @@ import { getCollection, render } from 'astro:content';
 import Base from '~/layouts/Base.astro';
 import Article from '~/components/Article.astro';
 import { t, url, type Lang } from '~/i18n';
-import { getTranslation, ruleName } from '~/lib/content';
+import { getTranslation } from '~/lib/content';
 
 export async function getStaticPaths() {
   const projects = await getCollection('projects');
@@ -22,7 +22,6 @@ const alternate = translation ? url(translation.data.lang, 'projects', translati
     icon="projects"
     margin={[t(lang, 'projects.title').replace(/er$|s$/, ''), String(project.data.year)]}
     title={project.data.title}
-    ruleName={ruleName('projects', project.id)}
   >
     {project.data.summary && <p class="summary">{project.data.summary}</p>}
     <Content />

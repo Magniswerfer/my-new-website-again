@@ -46,8 +46,6 @@ export async function getTranslation<C extends 'posts' | 'projects'>(
   return all.find((e) => e.data.translationKey === key && e.data.lang !== entry.data.lang);
 }
 
-/** Stable view-transition name shared by a list link's underline and the post's heading rule. */
-export const ruleName = (collection: string, id: string) => `rule-${collection}-${id}`;
 
 export const readingMinutes = (body = '') => Math.max(1, Math.round(body.split(/\s+/).filter(Boolean).length / 220));
 

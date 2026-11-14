@@ -109,8 +109,7 @@ left. The more the section holds, the wider the band. Sections are separated by 
 one band in that page's own dye runs behind the page heading.
 
 ### Footer
-Contact sentences on fading grooves. The grooves are dyed: each line takes the next section colour, cycling through all
-six, and they fade in from the top. Below, two small keys (PLAY and STOP) under the engraved label "Motion".
+Contact sentences on plain grooves that fade in from the top. Below, two small keys (PLAY and STOP) under the engraved label "Motion".
 
 ### Avatar
 A small character stands in for Magnus. The brief for generating it is in [`avatar-brief.md`](avatar-brief.md).
@@ -120,8 +119,7 @@ A small character stands in for Magnus. The brief for generating it is in [`avat
 - Threads drift slowly, at about a tenth of a cycle per second. Nothing else moves on its own.
 - PLAY/STOP in the footer starts and stops the drift, and the choice is remembered.
 - With reduced motion turned on, the threads are drawn once and stay still.
-- Kept from earlier rounds: the link underline that becomes the heading rule on the next page, and the reading line
-  on essays.
+- Kept from earlier rounds: the reading line on essays.
 
 ## Layout
 

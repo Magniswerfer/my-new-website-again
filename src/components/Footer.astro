@@ -64,12 +64,7 @@ const rss = url(lang, 'rss.xml').slice(0, -1);
   .foot { position: relative; margin-top: var(--block); }
   .foot::before {
     content: ''; position: absolute; inset: 0; pointer-events: none;
-    /* The grooves are dyed: each line in a section's colour, cycling through all six. */
-    background-image: repeating-linear-gradient(180deg,
-      transparent 0 6px, var(--blog) 6px 7px, transparent 7px 13px, var(--weeks) 13px 14px,
-      transparent 14px 20px, var(--projects) 20px 21px, transparent 21px 27px, var(--photos) 27px 28px,
-      transparent 28px 34px, var(--rotation) 34px 35px, transparent 35px 41px, var(--about) 41px 42px);
-    opacity: 0.55;
+    background-image: repeating-linear-gradient(180deg, transparent 0 6px, var(--groove-strong) 6px 7px);
     -webkit-mask-image: linear-gradient(180deg, transparent, #000 85%); mask-image: linear-gradient(180deg, transparent, #000 85%);
   }
   .f-in { position: relative; display: grid; gap: 8px; padding-block: 56px calc(64px + env(safe-area-inset-bottom, 0px)); }
