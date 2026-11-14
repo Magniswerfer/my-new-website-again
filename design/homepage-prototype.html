@@ -13,6 +13,7 @@
 :root {
   --body: #EDECE7;        /* snow white */
   --groove: rgb(30 30 32 / 0.075);
+  --groove-strong: rgb(30 30 32 / 0.16);
   --graphite: #2A2B2E;
   --platinum: #C9C7C0;
   --ink: #1D1D1F;
@@ -20,20 +21,21 @@
   --engrave: #8B8880;
   --led: #2FB352;
   --recess: #CFCDC6;
+  --key-top: #FAF9F5; --key-bottom: #DCDAD3; --recess-strip: #D6D4CD;
   --blog: #2E4D8F; --weeks: #B4412F; --projects: #C9962A; --photos: #4F7B52; --rotation: #6E4A6E; --about: #6A5242;
   --f: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --body: #1A1B1E; --groove: rgb(255 255 255 / 0.05); --graphite: #0E0F11; --platinum: #3A3B3F;
-    --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A; --recess: #0E0F11;
+    --body: #1A1B1E; --groove: rgb(255 255 255 / 0.05); --groove-strong: rgb(255 255 255 / 0.1); --graphite: #0E0F11; --platinum: #3A3B3F;
+    --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A; --recess: #0E0F11; --key-top: #3B3D41; --key-bottom: #2C2E31; --recess-strip: #111214;
     --blog: #7E9BE0; --weeks: #E2735F; --projects: #E3B653; --photos: #84B585; --rotation: #B98BB9; --about: #C29F86;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --body: #1A1B1E; --groove: rgb(255 255 255 / 0.05); --graphite: #0E0F11; --platinum: #3A3B3F;
-  --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A; --recess: #0E0F11;
+  --body: #1A1B1E; --groove: rgb(255 255 255 / 0.05); --groove-strong: rgb(255 255 255 / 0.1); --graphite: #0E0F11; --platinum: #3A3B3F;
+  --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A; --recess: #0E0F11; --key-top: #3B3D41; --key-bottom: #2C2E31; --recess-strip: #111214;
   --blog: #7E9BE0; --weeks: #E2735F; --projects: #E3B653; --photos: #84B585; --rotation: #B98BB9; --about: #C29F86;
   color-scheme: dark;
 }
@@ -54,46 +56,116 @@ a { color: inherit; }
 .c-blog { color: var(--blog); } .c-weeks { color: var(--weeks); } .c-projects { color: var(--projects); }
 .c-photos { color: var(--photos); } .c-rotation { color: var(--rotation); } .c-about { color: var(--about); }
 
-/* ---------- Header: grooved panel with a dark diagonal control corner ---------- */
-.head { position: relative; z-index: 2; border-bottom: 1px solid var(--groove); }
+/* ---------- Header and menu ----------
+   Three Frog-style menu variants (switch in the footer while we decide):
+   a  Corner: a graphite control corner cut at 45 degrees, with an LED under the item you point at.
+   b  Keys:   every section is a pill key sunk into a recessed strip, like FF / REW / PLAY.
+   c  Caps:   a graphite strip of engraved labels, each with a small coloured cap, like the trader console.
+   All grooves are horizontal. On small screens a MENU key opens the menu as a panel laid over the page. */
+.head { position: relative; z-index: 5; }
+html, body { overflow-x: clip; }
 .head-in { display: flex; align-items: stretch; justify-content: space-between; min-height: 76px; }
 .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.name { font-weight: 700; font-size: 19px; text-decoration: none; letter-spacing: -0.005em; padding-right: 24px; }
 .key.menu-key { display: none; }
 .fold { display: flex; }
-.name { align-self: center; font-weight: 700; font-size: 19px; text-decoration: none; letter-spacing: -0.005em; padding-right: 24px; }
-.corner {
-  position: relative; display: flex; align-items: center; gap: 22px;
-  padding: 0 max(28px, env(safe-area-inset-right, 0px)) 0 84px;
-  margin-right: calc(-1 * max(28px, env(safe-area-inset-right, 0px)));
-  background: var(--graphite); color: #E9E7E1;
+.corner { display: flex; align-items: center; }
+.corner ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; }
+.corner a { position: relative; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; font-size: 14.5px; font-weight: 500; }
+.hgroove-dark { background-image: repeating-linear-gradient(180deg, transparent 0 4px, rgb(255 255 255 / 0.05) 4px 5px); }
+
+/* a · Corner */
+[data-menu="a"] .corner {
+  background-color: var(--graphite); color: #E9E7E1;
+  background-image: repeating-linear-gradient(180deg, transparent 0 4px, rgb(255 255 255 / 0.05) 4px 5px);
   clip-path: polygon(56px 0, 100% 0, 100% 100%, 0 100%);
-  background-image: repeating-linear-gradient(90deg, transparent 0 3px, rgb(255 255 255 / 0.035) 3px 4px);
+  padding: 0 max(28px, env(safe-area-inset-right, 0px)) 0 84px; margin-right: calc(-1 * (max(28px, env(safe-area-inset-right, 0px)) + max(0px, (100vw - 2 * max(28px, env(safe-area-inset-right, 0px)) - 1180px) / 2)));
 }
-.corner ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
-.corner a { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; font-size: 14.5px; font-weight: 500; }
-.corner a span { border-bottom: 1.5px solid transparent; transition: border-color 0.15s; }
-.corner a:hover span { border-bottom-color: currentColor; }
-/* On the dark corner the pictograms brighten, like lit key caps. */
-.corner .c-blog { color: #8FA8EC; } .corner .c-weeks { color: #EE8470; } .corner .c-projects { color: #EBC064; }
-.corner .c-photos { color: #92C493; } .corner .c-rotation { color: #C79BC7; } .corner .c-about { color: #CFAE95; }
-.corner .lang { color: #A9A69F; font-size: 14px; }
+[data-menu="a"] .corner ul { gap: 6px 22px; }
+[data-menu="a"] .corner a::after {
+  content: ""; position: absolute; left: 50%; bottom: -11px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%;
+  background: #3D3E42; transition: background 0.15s, box-shadow 0.15s;
+}
+[data-menu="a"] .corner a:hover::after, [data-menu="a"] .corner a:focus-visible::after, [data-menu="a"] .corner a[aria-current]::after { background: var(--led); box-shadow: 0 0 6px var(--led); }
+[data-menu="a"] .corner .c-blog, [data-menu="c"] .corner .c-blog { color: #8FA8EC; }
+[data-menu="a"] .corner .c-weeks, [data-menu="c"] .corner .c-weeks { color: #EE8470; }
+[data-menu="a"] .corner .c-projects, [data-menu="c"] .corner .c-projects { color: #EBC064; }
+[data-menu="a"] .corner .c-photos, [data-menu="c"] .corner .c-photos { color: #92C493; }
+[data-menu="a"] .corner .c-rotation, [data-menu="c"] .corner .c-rotation { color: #C79BC7; }
+[data-menu="a"] .corner .c-about, [data-menu="c"] .corner .c-about { color: #CFAE95; }
+[data-menu="a"] .corner .lang, [data-menu="c"] .corner .lang { color: #A9A69F; }
+
+/* b · Keys */
+[data-menu="b"] .corner ul {
+  gap: 8px; padding: 6px; border-radius: 999px; background: var(--recess-strip);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.18), 0 1px 0 rgb(255 255 255 / 0.5);
+}
+[data-menu="b"] .corner a {
+  padding: 8px 13px; border-radius: 999px; font-size: 13.5px; color: var(--ink);
+  background: linear-gradient(180deg, var(--key-top), var(--key-bottom));
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.2), inset 0 -1px 0 rgb(0 0 0 / 0.1);
+  transition: transform 0.06s, box-shadow 0.06s;
+}
+[data-menu="b"] .corner a:hover { transform: translateY(1px); box-shadow: 0 0 0 rgb(0 0 0 / 0.2), inset 0 -1px 0 rgb(0 0 0 / 0.1); }
+[data-menu="b"] .corner .pic { width: 17px; height: 17px; }
+[data-menu="b"] .corner .lang { background: transparent; box-shadow: none; color: var(--soft); }
+
+/* c · Caps */
+[data-menu="c"] .corner {
+  align-items: stretch; background-color: var(--graphite); color: #E9E7E1;
+  background-image: repeating-linear-gradient(180deg, transparent 0 4px, rgb(255 255 255 / 0.05) 4px 5px);
+  padding-right: max(28px, env(safe-area-inset-right, 0px)); margin-right: calc(-1 * (max(28px, env(safe-area-inset-right, 0px)) + max(0px, (100vw - 2 * max(28px, env(safe-area-inset-right, 0px)) - 1180px) / 2)));
+}
+[data-menu="c"] .corner ul { flex-wrap: nowrap; align-items: stretch; }
+[data-menu="c"] .corner li { display: flex; }
+[data-menu="c"] .corner a {
+  flex-direction: column; justify-content: center; align-items: flex-start; gap: 7px; padding: 0 18px;
+  border-left: 1px solid rgb(255 255 255 / 0.09); color: #E9E7E1;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-stretch: 90%;
+}
+[data-menu="c"] .corner .pic { width: 24px; height: 5px; border-radius: 2px; background: currentColor; transition: box-shadow 0.15s; }
+[data-menu="c"] .corner .pic use { display: none; }
+[data-menu="c"] .corner a span { color: #E9E7E1; }
+[data-menu="c"] .corner a:hover .pic { box-shadow: 0 0 8px currentColor; }
+[data-menu="c"] .corner .lang { border-left: 1px solid rgb(255 255 255 / 0.09); }
+
 @media (max-width: 960px) {
-  /* On small screens the header is just the name and a menu key; the field shows through it. */
-  .head { background-image: none; border-bottom: 0; }
-  .head-in { flex-direction: column; align-items: stretch; min-height: 0; }
+  .head-in { display: block; min-height: 0; }
   .bar { padding-block: 16px; }
   .name { padding: 0; }
   .key.menu-key { display: inline-flex; }
-  /* The menu folds out from under the bar: the dark diagonal panel unrolls downward. */
-  .fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.7, 0.2, 1);
-    margin-inline: calc(-1 * max(28px, env(safe-area-inset-left, 0px))) calc(-1 * max(28px, env(safe-area-inset-right, 0px))); }
-  .fold > .corner { min-height: 0; overflow: hidden; }
-  .head[data-open] .fold { grid-template-rows: 1fr; }
-  .corner { clip-path: polygon(0 22px, 30px 0, 100% 0, 100% 100%, 0 100%); margin: 0;
-    padding: 0 max(28px, env(safe-area-inset-right, 0px)) 0 max(28px, env(safe-area-inset-left, 0px)); }
-  .corner ul { flex-direction: column; gap: 4px; padding-block: 34px 20px; }
-  .corner a { font-size: 17px; padding-block: 6px; }
-  @media (prefers-reduced-motion: reduce) { .fold { transition: none; } }
+  /* The menu lies over the page: it folds down from under the bar without moving the content. */
+  .fold {
+    position: absolute; top: 100%; left: 0; right: 0; display: block;
+    clip-path: inset(0 0 100% 0); visibility: hidden;
+    transition: clip-path 0.32s cubic-bezier(0.2, 0.7, 0.2, 1), visibility 0s 0.32s;
+    filter: drop-shadow(0 14px 24px rgb(0 0 0 / 0.22));
+  }
+  .head[data-open] .fold { clip-path: inset(0 0 -40px 0); visibility: visible; transition: clip-path 0.32s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .corner { margin: 0 !important; display: block; }
+  .corner ul { flex-direction: column; align-items: stretch; flex-wrap: nowrap; }
+  .corner a { font-size: 17px; }
+
+  [data-menu="a"] .corner { clip-path: polygon(0 22px, 30px 0, 100% 0, 100% 100%, 0 100%); padding: 32px max(28px, env(safe-area-inset-right, 0px)) 22px max(28px, env(safe-area-inset-left, 0px)); }
+  [data-menu="a"] .corner ul { gap: 2px; }
+  [data-menu="a"] .corner a { padding: 9px 0 9px 18px; }
+  [data-menu="a"] .corner a::after { left: 0; bottom: auto; top: 50%; margin: -2.5px 0 0; }
+
+  [data-menu="b"] .corner {
+    background-color: var(--body); padding: 18px max(28px, env(safe-area-inset-right, 0px)) 22px max(28px, env(safe-area-inset-left, 0px));
+    background-image: repeating-linear-gradient(180deg, transparent 0 5px, var(--groove) 5px 6px, transparent 6px 7px);
+    border-block: 1px solid var(--groove);
+  }
+  [data-menu="b"] .corner ul { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-radius: 22px; padding: 10px; }
+  [data-menu="b"] .corner a { justify-content: flex-start; padding: 12px 14px; font-size: 15px; }
+  [data-menu="b"] .corner .lang { justify-content: center; }
+
+  [data-menu="c"] .corner { padding: 6px max(28px, env(safe-area-inset-right, 0px)) 14px max(28px, env(safe-area-inset-left, 0px)); }
+  [data-menu="c"] .corner ul { flex-direction: column; }
+  [data-menu="c"] .corner a { display: flex; width: 100%; justify-content: flex-start; flex-direction: row; align-items: center; gap: 14px; padding: 15px 0; border-left: 0; border-top: 1px solid rgb(255 255 255 / 0.09); font-size: 13px; }
+  [data-menu="c"] .corner li:first-child a { border-top: 0; }
+  [data-menu="c"] .corner .lang { border-left: 0; }
+  @media (prefers-reduced-motion: reduce) { .fold, .head[data-open] .fold { transition: none; } }
 }
 
 /* ---------- Stage: hero + sections, with the thread canvas behind ---------- */
@@ -119,7 +191,13 @@ main { position: relative; z-index: 1; }
 .empty { margin: 0; color: var(--soft); max-width: 40rem; padding-top: 2px; }
 @media (max-width: 760px) { .sec { grid-template-columns: minmax(0, 1fr); } }
 
-/* ---------- Footer: a grooved panel ---------- */
+/* ---------- Footer: horizontal grooves that fade in from the top ---------- */
+footer::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: repeating-linear-gradient(180deg, transparent 0 6px, var(--groove-strong) 6px 7px);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 85%); mask-image: linear-gradient(180deg, transparent, #000 85%);
+}
+.f-in { position: relative; }
 footer { position: relative; z-index: 1; margin-top: 8px; }
 .f-in { padding-block: 52px 76px; display: grid; gap: 8px; }
 .f-in p { margin: 0; max-width: 40rem; }
@@ -155,7 +233,7 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
 
 <div class="stage" id="stage">
   <canvas id="threads" aria-hidden="true"></canvas>
-<header class="head grooves pad"><div class="wrap head-in">
+<header class="head pad" data-menu="a"><div class="wrap head-in">
   <div class="bar"><a class="name" href="#top">Magnus H. Kaspersen</a><button type="button" class="key menu-key" id="menuKey" aria-expanded="false" aria-controls="menu"><span class="led"></span>Menu</button></div>
   <div class="fold" id="menu"><nav class="corner" aria-label="Main"><ul>
     <li><a href="#blog"><svg class="pic c-blog"><use href="#i-blog"/></svg><span>Blog</span></a></li>
@@ -195,7 +273,7 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
   </div></main>
 </div>
 
-<footer class="grooves pad"><div class="wrap f-in">
+<footer class="pad"><div class="wrap f-in">
   <span class="engraved">Contact</span>
   <p>Write to me at hello@magnushkaspersen.com or use the contact form.</p>
   <p>Follow new writing by RSS, and I'm also on GitHub.</p>
@@ -203,6 +281,12 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
     <span class="engraved">Motion</span>
     <button type="button" class="key small" id="play" aria-pressed="true"><span class="led"></span>Play</button>
     <button type="button" class="key small" id="stop" aria-pressed="false">Stop</button>
+  </div>
+  <div class="motion" role="group" aria-label="Menu design (prototype only)">
+    <span class="engraved">Menu</span>
+    <button type="button" class="key small" data-menuv="a" aria-pressed="true"><span class="led"></span>Corner</button>
+    <button type="button" class="key small" data-menuv="b" aria-pressed="false"><span class="led"></span>Keys</button>
+    <button type="button" class="key small" data-menuv="c" aria-pressed="false"><span class="led"></span>Caps</button>
   </div>
 </div></footer>
 
@@ -357,7 +441,13 @@ footer { position: relative; z-index: 1; margin-top: 8px; }
     var open = !head.hasAttribute('data-open');
     if (open) head.setAttribute('data-open', ''); else head.removeAttribute('data-open');
     menuKey.setAttribute('aria-expanded', String(open));
-    setTimeout(function () { measure(); frame(performance.now()); }, 340);
+  });
+  document.querySelectorAll('[data-menuv]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      head.setAttribute('data-menu', b.dataset.menuv);
+      document.querySelectorAll('[data-menuv]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      measure(); frame(performance.now());
+    });
   });
   var play = document.getElementById('play'), stop = document.getElementById('stop');
   function setPlaying(v) { playing = v; play.setAttribute('aria-pressed', String(v)); stop.setAttribute('aria-pressed', String(!v)); }
