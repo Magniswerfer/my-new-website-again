@@ -12,7 +12,7 @@ const { Content } = page ? await render(page) : { Content: null };
 ---
 
 <Base lang={lang} title={page?.data.title ?? t(lang, 'nav.about')} current="about">
-  <PageHead icon="about" title={page?.data.title ?? t(lang, 'nav.about')} />
+  <PageHead icon="about" title={page?.data.title ?? t(lang, 'nav.about')} pose="wave" poseLabel={lang === 'da' ? 'Min robotfigur, der vinker' : 'My robot character, waving'} />
   <div class="row">
     <div class="margin"></div>
     <div class="column prose">{Content ? <Content /> : <p>{t(lang, 'home.intro')}</p>}</div>

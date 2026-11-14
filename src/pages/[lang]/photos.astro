@@ -12,7 +12,7 @@ const photos = await getPhotos();
 ---
 
 <Base lang={lang} title={t(lang, 'photos.title')} current="photos">
-  <PageHead icon="photos" title={t(lang, 'photos.title')} intro={t(lang, 'photos.intro')} />
+  <PageHead icon="photos" title={t(lang, 'photos.title')} intro={t(lang, 'photos.intro')} pose="backpack" poseLabel={lang === 'da' ? 'Min robotfigur går tur med en rygsæk' : 'My robot character walking with a backpack'} />
   {photos.length === 0 && <Empty text={t(lang, 'empty.photos')} />}
   <div class="diary">
     {photos.map((p) => {

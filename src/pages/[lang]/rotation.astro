@@ -17,7 +17,7 @@ const groups = [
 ---
 
 <Base lang={lang} title={t(lang, 'books.title')} current="rotation">
-  <PageHead icon="rotation" title={t(lang, 'books.title')} intro={t(lang, 'books.intro')} />
+  <PageHead icon="rotation" title={t(lang, 'books.title')} intro={t(lang, 'books.intro')} pose="read" poseLabel={lang === 'da' ? 'Min robotfigur sidder og læser en bog' : 'My robot character sitting with a book'} />
   {books.length === 0 && <Empty text={t(lang, 'empty.books')} />}
   <div class="groups">
     {groups.map(([status, key]) => {

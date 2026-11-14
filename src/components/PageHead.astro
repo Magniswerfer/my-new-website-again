@@ -1,9 +1,10 @@
 ---
 /** A page heading: the one loud thing on the page. The contour field runs behind it. */
 import Icon, { type IconName } from './Icon.astro';
+import Avatar, { type Pose } from './Avatar.astro';
 
-interface Props { title: string; intro?: string; icon?: IconName; label?: string }
-const { title, intro, icon, label } = Astro.props;
+interface Props { title: string; intro?: string; icon?: IconName; label?: string; pose?: Pose; poseLabel?: string }
+const { title, intro, icon, label, pose, poseLabel } = Astro.props;
 ---
 
 <header class="head" data-field>
@@ -13,10 +14,13 @@ const { title, intro, icon, label } = Astro.props;
     {intro && <p class="intro">{intro}</p>}
     <slot />
   </div>
+  {pose && <Avatar class="pose" pose={pose} label={poseLabel ?? ''} sizes="(max-width: 760px) 130px, 220px" />}
 </header>
 
 <style>
-  .head { padding-block: clamp(40px, 6vw, 88px) clamp(56px, 8vw, 110px); }
+  .head { padding-block: clamp(40px, 6vw, 88px) clamp(56px, 8vw, 110px); position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  .head :global(.pose) { flex: none; width: clamp(130px, 17vw, 220px); margin-bottom: clamp(-40px, -3vw, -12px); }
+  @media (max-width: 560px) { .head { display: grid; } .head :global(.pose) { justify-self: end; margin-top: -8px; margin-bottom: -24px; } }
   .text { display: grid; gap: 18px; max-width: 36rem; }
   .kicker { display: inline-flex; align-items: center; gap: 8px; }
   .kicker .pic { width: 16px; height: 16px; }

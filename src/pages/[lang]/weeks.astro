@@ -20,7 +20,7 @@ const rows = weeks.map((w) => {
 ---
 
 <Base lang={lang} title={t(lang, 'weeks.title')} current="weeks">
-  <PageHead icon="weeks" title={t(lang, 'weeks.title')} intro={t(lang, 'weeks.intro')} />
+  <PageHead icon="weeks" title={t(lang, 'weeks.title')} intro={t(lang, 'weeks.intro')} pose="coffee" poseLabel={lang === 'da' ? 'Min robotfigur med en kop kaffe' : 'My robot character with a cup of coffee'} />
 
   {weeks.length === 0 && <Empty text={t(lang, 'empty.weeks')} />}
   <ol class="log">

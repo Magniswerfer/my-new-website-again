@@ -55,6 +55,7 @@ const rss = url(lang, 'rss.xml').slice(0, -1);
     if (!b) return;
     try { localStorage.setItem('mhk:motion', b.dataset.motion!); } catch {}
     sync();
+    document.dispatchEvent(new Event('mhk:motion'));
   });
   document.addEventListener('astro:page-load', sync);
 </script>

@@ -1,0 +1,114 @@
+---
+/**
+ * The character. Poses are cut from the pose sheet by design/avatar/cutout.py,
+ * all in one shared frame so they can be swapped in place. Ink marks (ticks,
+ * z's, the thought bubble) are a separate layer so they turn light in dark mode.
+ *
+ * `live` (the homepage) stacks standing, blink, wave and sleep: he blinks,
+ * breathes, waves when pointed at (and once on arrival), and sits down to sleep
+ * while the footer's motion setting is off.
+ */
+import { getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+const files = import.meta.glob<{ default: ImageMetadata }>('../assets/avatar/*.webp', { eager: true });
+const asset = (name: string) => files[`../assets/avatar/${name}.webp`]?.default;
+
+export type Pose = 'stand' | 'wave' | 'walk' | 'read' | 'game' | 'solder' | 'think' | 'sleep' | 'backpack' | 'cheer' | 'laptop' | 'coffee';
+interface Props { pose?: Pose; live?: boolean; label: string; class?: string; sizes?: string }
+const { pose = 'stand', live = false, label, class: cls, sizes = '(max-width: 760px) 170px, 320px' } = Astro.props;
+
+const layers: string[] = live ? ['stand', 'blink', 'wave', 'sleep'] : [pose];
+async function img(name: string) {
+  const src = asset(name);
+  if (!src) return undefined;
+  const i = await getImage({ src, widths: [200, 400, 768].filter((w) => w <= src.width), format: 'webp' });
+  return { src: i.src, srcset: i.srcSet.attribute };
+}
+const images = await Promise.all(layers.map(async (l) => ({ layer: l, fig: await img(l), marks: await img(`${l}-marks`) })));
+const { width, height } = asset('stand')!;
+---
+
+<div class:list={['avatar', cls]} role={label ? 'img' : undefined} aria-label={label || undefined} aria-hidden={label ? undefined : 'true'}
+  data-avatar={live ? 'live' : undefined} data-state={live ? 'stand' : pose} style={`aspect-ratio: ${width} / ${height}`}>
+  {images.map(({ layer, fig, marks }) => (
+    <div class="layer" data-layer={layer}>
+      <img class="fig" src={fig!.src} srcset={fig!.srcset} sizes={sizes} width={width} height={height} alt=""
+        loading={live ? 'eager' : 'lazy'} decoding="async" draggable="false" />
+      {marks && <img class="marks" src={marks.src} srcset={marks.srcset} sizes={sizes} width={width} height={height} alt=""
+        loading={live ? 'eager' : 'lazy'} decoding="async" draggable="false" />}
+    </div>
+  ))}
+</div>
+
+<style>
+  .avatar { position: relative; user-select: none; -webkit-user-select: none; }
+  .layer, .layer img { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .layer img { display: block; pointer-events: none; }
+  .fig { transform-origin: 50% 90%; }
+  @media (prefers-color-scheme: dark) { .marks { filter: invert(1) brightness(0.92); } }
+
+  /* Live: one layer shows at a time. */
+  .avatar[data-avatar] { cursor: pointer; }
+  .avatar[data-avatar] .layer { opacity: 0; }
+  .avatar[data-state='stand'] [data-layer='stand'],
+  .avatar[data-state='blink'] [data-layer='blink'],
+  .avatar[data-state='wave'] [data-layer='wave'],
+  .avatar[data-state='sleep'] [data-layer='sleep'] { opacity: 1; }
+  /* Blinks are instant; waving and sitting down crossfade. */
+  .avatar[data-avatar] :is([data-layer='wave'], [data-layer='sleep']) { transition: opacity 0.22s; }
+  .avatar[data-avatar]:is([data-state='wave'], [data-state='sleep']) [data-layer='stand'] { transition: opacity 0.22s; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .avatar[data-avatar]:not([data-still]) .fig { animation: breathe 3.4s ease-in-out infinite; }
+    .avatar[data-avatar][data-state='sleep'] [data-layer='sleep'] .fig { animation: breathe 5.6s ease-in-out infinite; }
+    .avatar[data-state='wave'] [data-layer='wave'] .marks { animation: tick 0.45s ease-in-out infinite alternate; }
+    .avatar[data-state='sleep'] [data-layer='sleep'] .marks { animation: drift 3.6s ease-in-out infinite; }
+    .avatar:not([data-avatar]) .marks { animation: drift 4s ease-in-out infinite; }
+  }
+  @keyframes breathe { 50% { transform: scale(1.008, 1.018); } }
+  @keyframes tick { to { transform: translate(1.5%, -1.5%); } }
+  @keyframes drift { 0%, 100% { transform: none; opacity: 1; } 50% { transform: translate(1%, -2%); opacity: 0.7; } }
+</style>
+
+<script>
+  type Box = HTMLElement & { _stop?: () => void };
+  const motionOn = () => { try { return localStorage.getItem('mhk:motion') !== 'off'; } catch { return true; } };
+
+  function init() {
+    document.querySelectorAll<Box>('[data-avatar="live"]').forEach((box) => {
+      box._stop?.();
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let blinkTimer = 0, waveTimer = 0;
+      const set = (s: string) => (box.dataset.state = s);
+      const rest = () => set(motionOn() ? 'stand' : 'sleep');
+      const blink = () => {
+        blinkTimer = window.setTimeout(() => {
+          if (box.dataset.state === 'stand') {
+            set('blink');
+            window.setTimeout(() => box.dataset.state === 'blink' && set('stand'), 130);
+          }
+          blink();
+        }, 2600 + Math.random() * 3800);
+      };
+      const hello = () => {
+        if (!motionOn()) return;
+        set('wave'); clearTimeout(waveTimer);
+        waveTimer = window.setTimeout(rest, 1800);
+      };
+      const onMotion = () => { box.toggleAttribute('data-still', !motionOn()); rest(); };
+      onMotion();
+      if (!reduce) { blink(); waveTimer = window.setTimeout(hello, 900); }
+      box.addEventListener('pointerenter', hello);
+      box.addEventListener('click', hello);
+      document.addEventListener('mhk:motion', onMotion);
+      box._stop = () => {
+        clearTimeout(blinkTimer); clearTimeout(waveTimer);
+        box.removeEventListener('pointerenter', hello); box.removeEventListener('click', hello);
+        document.removeEventListener('mhk:motion', onMotion);
+      };
+    });
+  }
+  document.addEventListener('astro:page-load', init);
+  document.addEventListener('astro:before-swap', () => document.querySelectorAll<Box>('[data-avatar="live"]').forEach((b) => b._stop?.()));
+</script>

@@ -4,6 +4,7 @@ import Base from '~/layouts/Base.astro';
 import EntryList from '~/components/EntryList.astro';
 import Empty from '~/components/Empty.astro';
 import Icon from '~/components/Icon.astro';
+import Avatar from '~/components/Avatar.astro';
 import { t, url, langPaths, isoWeek, type Lang } from '~/i18n';
 import { getPosts, getProjects, getPhotos, getBooks, getWeeks, weekText, linkLabel } from '~/lib/content';
 
@@ -28,6 +29,7 @@ const lede = latest ? intro : split ? split[2] : undefined;
 
 <Base lang={lang} field="home">
   <section class="hero" aria-labelledby="hello" data-field>
+    <Avatar live class="hero-avatar" sizes="(max-width: 760px) 170px, 340px" label={lang === 'da' ? 'Min lille robotfigur, der vinker' : 'My little robot character, waving'} />
     <div class="hero-in" data-field-text>
       <span class="engraved">{t(lang, 'home.week')} {week} &nbsp;{year}</span>
       <h1 id="hello" class:list={{ long: !!latest }}>{headline}</h1>
@@ -81,13 +83,21 @@ const lede = latest ? intro : split ? split[2] : undefined;
 </Base>
 
 <style>
+  .hero { position: relative; }
+  .hero :global(.hero-avatar) {
+    position: absolute; z-index: 2; right: clamp(0px, 6vw, 90px); bottom: clamp(40px, 7vw, 110px);
+    width: clamp(220px, 24vw, 320px); aspect-ratio: 5 / 6;
+  }
+  @media (max-width: 760px) {
+    .hero :global(.hero-avatar) { right: 4px; bottom: 10px; width: 150px; }
+  }
   .hero-in {
     display: grid; gap: 20px; max-width: 34rem;
     padding-block: clamp(56px, 8vw, 112px) clamp(110px, 15vw, 210px);
   }
   h1.long { font-size: clamp(2.2rem, 1.3rem + 3vw, 3.6rem); line-height: 1.04; max-width: 18ch; }
   .lede { font-size: var(--t-lead); line-height: 1.4; max-width: 26ch; }
-  @media (max-width: 760px) { .hero-in { padding-block: 40px 170px; } }
+  @media (max-width: 760px) { .hero-in { padding-block: 40px 200px; } }
 
   .sec { padding-block: 52px; }
   .sec .margin-title .pic { width: 20px; height: 20px; }

@@ -12,7 +12,7 @@ const posts = await getPosts(lang);
 ---
 
 <Base lang={lang} title={t(lang, 'writing.title')} current="blog">
-  <PageHead icon="blog" title={t(lang, 'writing.title')} intro={t(lang, 'writing.intro')} />
+  <PageHead icon="blog" title={t(lang, 'writing.title')} intro={t(lang, 'writing.intro')} pose="laptop" poseLabel={lang === 'da' ? 'Min robotfigur sidder med en bærbar' : 'My robot character sitting with a laptop'} />
   {posts.length === 0 ? <Empty text={t(lang, 'empty.writing')} /> : (
     <EntryList
       lang={lang}

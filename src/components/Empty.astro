@@ -1,5 +1,6 @@
 ---
-/** Shown where a list has nothing in it yet. */
+/** Shown where a list has nothing in it yet: the character naps until something arrives. */
+import Avatar from './Avatar.astro';
 interface Props { text: string; plain?: boolean }
 const { text, plain = false } = Astro.props;
 ---
@@ -7,10 +8,15 @@ const { text, plain = false } = Astro.props;
 {plain ? <p class="empty">{text}</p> : (
   <div class="row">
     <div class="margin"></div>
-    <p class="column empty">{text}</p>
+    <div class="column nap">
+      <Avatar class="nap-avatar" pose="sleep" label="" sizes="110px" />
+      <p class="empty">{text}</p>
+    </div>
   </div>
 )}
 
 <style>
   .empty { color: var(--soft); max-width: 40rem; }
+  .nap { display: flex; align-items: center; gap: 20px; }
+  .nap :global(.nap-avatar) { flex: none; width: 110px; }
 </style>

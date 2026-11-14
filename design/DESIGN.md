@@ -112,7 +112,27 @@ one band in that page's own dye runs behind the page heading.
 Contact sentences on plain grooves that fade in from the top. Below, two small keys (PLAY and STOP) under the engraved label "Motion".
 
 ### Avatar
-A small character stands in for Magnus. The brief for generating it is in [`avatar-brief.md`](avatar-brief.md).
+A small character stands in for Magnus: a snow-white bean of a robot with three grooves, egg arms, stubby legs, glossy capsule eyes, a green LED and a pill key. The original brief is in [`avatar-brief.md`](avatar-brief.md); the reference sheet it produced is `avatar/reference.png`.
+
+**How he is made.** The site uses cut-outs of the pose sheet `avatar/poses-sheet.png` (12 poses on transparency, made in ChatGPT). `python3 design/avatar/cutout.py` slices it into one shared frame per pose, upsamples it once, splits the ink marks (ticks, z's, the thought bubble) into a separate `-marks` layer, makes a blink frame from the standing pose, and writes everything to `src/assets/avatar/`. To get sharper images, regenerate the sheet at a higher resolution in the same 4 × 3 layout and run the script again.
+
+`avatar/build.py` is a Blender model of him, built from measurements of the turnaround sheet `avatar/reference.png` and rendered with Cycles. It isn't used on the site; keep it for poses the sheet doesn't have.
+
+**Where he appears.**
+- Homepage hero: alive. He breathes, blinks, waves when pointed at (and once on arrival), and sits down to sleep, with drifting z's, while the footer's motion is stopped.
+- Page headings, one pose per section:
+  - Projects: soldering (maker and repairer)
+  - Blog: laptop
+  - Weeks: coffee
+  - Photos: walking with a backpack
+  - My rotation: sitting with a book
+  - About: waving
+  - Contact confirmation: cheering
+  - 404 page: thinking
+- Empty lists: he naps next to the message.
+- Small marks: the flat drawing (`Avatar2D`) next to the name in the header, as the favicon, and asleep as the end mark of each essay.
+
+The marks layer is inverted in dark mode and moves a little on its own (ticks while waving, drifting z's).
 
 ## Motion
 

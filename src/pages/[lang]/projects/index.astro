@@ -12,7 +12,7 @@ const projects = await getProjects(lang);
 ---
 
 <Base lang={lang} title={t(lang, 'projects.title')} current="projects">
-  <PageHead icon="projects" title={t(lang, 'projects.title')} intro={t(lang, 'projects.intro')} />
+  <PageHead icon="projects" title={t(lang, 'projects.title')} intro={t(lang, 'projects.intro')} pose="solder" poseLabel={lang === 'da' ? 'Min robotfigur med en loddekolbe og et printkort' : 'My robot character with a soldering iron and a circuit board'} />
   {projects.length === 0 ? <Empty text={t(lang, 'empty.projects')} /> : (
     <EntryList
       lang={lang}
