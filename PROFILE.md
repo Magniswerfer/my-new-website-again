@@ -6,6 +6,59 @@ The brief for the new site, based on the interview of 11 Nov 2026. Use it to mak
 
 A calm, editorial, bilingual (EN/DA) digital home for a personal reinvention. It changes often, is personal but curated, and is written in a reflective voice.
 
+## The person behind it
+
+A reading of Magnus, written from his own description (Nov 2026) and confirmed by him. It is the source for design decisions: when a detail is in doubt, check it against this.
+
+### Reading Magnus
+
+**Rooted, not restless.** Grew up in Aarhus and still lives there. He is starting over, but not running away, so the reinvention happens on home ground. The site shouldn't put on cosmopolitan polish. It should feel like someone at home in his own place.
+
+**Found himself by stepping out of a given frame.** He went from a Christian school to a secular high school, where he "really found himself". He knows what it's like to inherit a structure and then choose his own. The site should have a firm structure that frees things rather than confines them, the way a good grid gives a page room to breathe.
+
+**A nerd without apology, among friends who weren't.** Always the computer person in a group of non-nerds. The technical depth is real, but it's never gatekept: he explains, translates and includes. Technical detail should be visible and inviting, never insider-only.
+
+**Design-literate, across the whole arc.** He studied IT Product Development at Aarhus University, and its design history course ran from Arts & Crafts to Frog Design. That span isn't one style; it's an argument running through the history:
+- *William Morris:* make things honestly, by hand, against alienating industry. Morris was also a socialist.
+- *Ulm and Dieter Rams (Braun):* form follows function. Less, but better. Design as a social good.
+- *Frog:* form follows emotion. Objects should have character.
+
+His taste sits where those meet: rigour and feeling, function and warmth. Braun and Rams are a favourite, "but that's not to say that's what the website design should all be. I like a human touch too." He belongs to all three, not one.
+
+**The hand that fixes.** He builds things, does electronics and repairs what's broken in his house. His projects follow the same pattern:
+- PadSquire frees a controller from Windows-only vendor software.
+- Stages remembers what macOS forgets.
+- Daily xkcd fills the days between strips.
+
+Each one repairs a small gap someone else left. That's a right-to-repair instinct, and it lines up with his politics (very left wing) and with Morris. In design terms: honest construction, visible seams, nothing sealed shut.
+
+**Worlds, not just stories.** He loved Star Wars and The Lord of the Rings growing up and reads a lot of fantasy and sci-fi. Those are built worlds: maps, appendices, calendars, lore, the "used future" of patched-up machines. Tolkien dated everything; Magnus keeps a week log. The fantasy isn't decoration to bolt on. It's a love of things with depth, history and wear, where details reward attention.
+
+**Games as things to study.** He plays video games and studies them. Game designers obsess over "game feel": how an action responds when you press it. So motion on the site should answer the visitor, the way a good game answers input. Nothing should animate just to look busy.
+
+**A teacher-researcher.** A PhD in computer science, specifically AI in education, means his work is about how people learn. That brings scaffolding, explanation, references and patience, and the academic habit of notes in the margin. He also loves music.
+
+### Mind and hand
+
+- **Mind:** historical, systematic, values-driven, imaginative, analytical, playful.
+- **Hand:** a maker, tinkerer and repairer who prefers fixing to replacing and opening things up to sealing them.
+
+**The throughline:** *well-made things people can understand, use, open up and fix, made with care and a bit of soul.* That runs from Morris through Ulm to open source, and it's the same whether he's repairing a shelf or writing a controller tool.
+
+### What that means for the page
+
+1. **Honest construction.** Show how the site is made, the way a repairable object shows its screws. The margin column becomes the workshop annotations, and each page shows how it was built.
+2. **Function with feeling.** Rams's discipline in the structure, Frog's character in the details. Each detail earns its place by doing something.
+3. **Patina, not polish.** Things show they've been used. The paper grain fits, and so would marks that build up as you use the site, like a pencil tick beside posts you've read.
+4. **Depth for those who look.** Like a Tolkien appendix: the surface is calm, and there's more if you go looking (the week log, sidenotes, an index).
+5. **Feel on input, stillness at rest.** Interactions respond crisply to the person, and nothing moves for show.
+6. **Open and teachable.** Plain language, no tracking, accessible, readable source. Those are his politics expressed as craft.
+7. **Rooted.** Danish week numbers, Danish dates, and Aarhus as a quiet fact, not a brand.
+
+**Confirmed to lead the design:** all four threads: rigour + feeling, repair & openness, worlds & patina, and game feel.
+
+**A mistake not to repeat:** turning one influence (Braun) into the whole design. Braun is one voice among several. Read the whole person, not the most quotable reference.
+
 ## Purpose & audience
 
 | | |
