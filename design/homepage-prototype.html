@@ -20,6 +20,7 @@
   --soft: #5F5D58;
   --engrave: #8B8880;
   --led: #2FB352;
+  --led-off: #B9B7B0;
   --recess: #CFCDC6;
   --key-top: #FAF9F5; --key-bottom: #DCDAD3; --recess-strip: #D6D4CD;
   --blog: #2E4D8F; --weeks: #B4412F; --projects: #C9962A; --photos: #4F7B52; --rotation: #6E4A6E; --about: #6A5242;
@@ -27,6 +28,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --led-off: #2A322C;
     --body: #1A1B1E; --groove: rgb(255 255 255 / 0.05); --groove-strong: rgb(255 255 255 / 0.1); --graphite: #0E0F11; --platinum: #3A3B3F;
     --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A; --recess: #0E0F11; --key-top: #3B3D41; --key-bottom: #2C2E31; --recess-strip: #111214;
     --blog: #7E9BE0; --weeks: #E2735F; --projects: #E3B653; --photos: #84B585; --rotation: #B98BB9; --about: #C29F86;
@@ -34,6 +36,7 @@
   }
 }
 :root[data-theme="dark"] {
+  --led-off: #2A322C;
   --body: #1A1B1E; --groove: rgb(255 255 255 / 0.05); --groove-strong: rgb(255 255 255 / 0.1); --graphite: #0E0F11; --platinum: #3A3B3F;
   --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A; --recess: #0E0F11; --key-top: #3B3D41; --key-bottom: #2C2E31; --recess-strip: #111214;
   --blog: #7E9BE0; --weeks: #E2735F; --projects: #E3B653; --photos: #84B585; --rotation: #B98BB9; --about: #C29F86;
@@ -89,9 +92,12 @@ html, body { overflow-x: clip; }
 .corner a:hover { transform: translateY(1px); box-shadow: 0 0.5px 0 rgb(0 0 0 / 0.22), inset 0 -1px 0 rgb(0 0 0 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.6); }
 .corner a:active { transform: translateY(1.5px); box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.2); }
 .corner .pic { width: 17px; height: 17px; }
-.corner a[aria-current]::before {
-  content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--led); box-shadow: 0 0 6px var(--led); order: 3; margin-left: 2px;
+/* Every key has an LED; only the current page's is lit. */
+.corner li:not(.lang-li) a::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%; order: 3; margin-left: 2px;
+  background: var(--led-off); box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.35);
 }
+.corner li:not(.lang-li) a[aria-current]::before { background: var(--led); box-shadow: 0 0 6px var(--led); }
 .corner .lang { background: transparent; box-shadow: none; color: var(--soft); }
 .corner .lang:hover { transform: none; box-shadow: none; color: var(--ink); }
 
@@ -117,7 +123,7 @@ html, body { overflow-x: clip; }
   .corner ul { display: flex; flex-direction: column; align-items: stretch; gap: 10px; border-radius: 0; padding: 0; background: none; box-shadow: none; }
   .corner a { display: flex; width: 100%; justify-content: flex-start; gap: 12px; padding: 13px 18px; font-size: 16px; }
   .corner .pic { width: 20px; height: 20px; }
-  .corner a[aria-current]::before { order: 3; margin-left: auto; }
+  .corner li:not(.lang-li) a::before { margin-left: auto; }
   .corner .lang { justify-content: center; padding: 10px 18px 6px; font-size: 14px; }
   @media (prefers-reduced-motion: reduce) { .fold, .head[data-open] .fold { transition: none; } }
 }
