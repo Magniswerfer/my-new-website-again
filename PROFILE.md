@@ -59,6 +59,12 @@ Each one repairs a small gap someone else left. That's a right-to-repair instinc
 
 **A mistake not to repeat:** turning one influence (Braun) into the whole design. Braun is one voice among several. Read the whole person, not the most quotable reference.
 
+## Current design (Nov 2026)
+
+The site follows **[`design/DESIGN.md`](design/DESIGN.md)**: Frog hardware with living threads. It replaces the earlier
+directions recorded further down in this file (the weekly notebook, Strawberry Thief, the workshop book), which are
+kept as history. Where they disagree, `design/DESIGN.md` wins.
+
 ## Purpose & audience
 
 | | |

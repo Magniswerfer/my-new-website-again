@@ -1,7 +1,6 @@
 ---
 import Base from '~/layouts/Base.astro';
 import PageHead from '~/components/PageHead.astro';
-import WeeksGrid from '~/components/WeeksGrid.astro';
 import Empty from '~/components/Empty.astro';
 import ReadMark from '~/components/ReadMark.astro';
 import { t, langPaths, isoWeek, weekLabel, weekRange, isoDate, type Lang } from '~/i18n';
@@ -21,9 +20,7 @@ const rows = weeks.map((w) => {
 ---
 
 <Base lang={lang} title={t(lang, 'weeks.title')} current="weeks">
-  <PageHead title={t(lang, 'weeks.title')} intro={t(lang, 'weeks.intro')}>
-    <WeeksGrid slot="margin" lang={lang} />
-  </PageHead>
+  <PageHead icon="weeks" title={t(lang, 'weeks.title')} intro={t(lang, 'weeks.intro')} />
 
   {weeks.length === 0 && <Empty text={t(lang, 'empty.weeks')} />}
   <ol class="log">

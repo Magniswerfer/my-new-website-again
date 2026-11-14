@@ -4,7 +4,7 @@ A bilingual (English / Danish) digital home. The brief and every design decision
 
 - **Astro 7**, static by default, deployed to **Cloudflare Workers**
 - **Keystatic** for editing content in a web UI (no database: content lives as files in this repo)
-- *Strawberry Thief* palette (indigo and madder on linen), **Schibsted Grotesk** headlines, **IBM Plex Sans/Mono** text, all fonts self-hosted
+- Design system in [`design/DESIGN.md`](design/DESIGN.md): snow-white Frog hardware (pill keys, LEDs, grooves) with living contour threads; **Instrument Sans**, self-hosted
 - Two signature moments: the **underline → heading** page transition and the **reading line** on essays
 
 > All content in `src/content/` is sample copy, and the photos are generated placeholders. Replace them before launch.

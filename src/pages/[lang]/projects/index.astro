@@ -1,10 +1,10 @@
 ---
 import Base from '~/layouts/Base.astro';
 import PageHead from '~/components/PageHead.astro';
-import ProjectPlate from '~/components/ProjectPlate.astro';
+import EntryList from '~/components/EntryList.astro';
 import Empty from '~/components/Empty.astro';
 import { t, url, langPaths, type Lang } from '~/i18n';
-import { getProjects } from '~/lib/content';
+import { getProjects, linkLabel } from '~/lib/content';
 
 export const getStaticPaths = langPaths;
 const lang = Astro.params.lang as Lang;
@@ -12,19 +12,12 @@ const projects = await getProjects(lang);
 ---
 
 <Base lang={lang} title={t(lang, 'projects.title')} current="projects">
-  <PageHead title={t(lang, 'projects.title')} intro={t(lang, 'projects.intro')} />
+  <PageHead icon="projects" title={t(lang, 'projects.title')} intro={t(lang, 'projects.intro')} />
   {projects.length === 0 ? <Empty text={t(lang, 'empty.projects')} /> : (
-    <div class="row">
-      <div class="margin"></div>
-      <div class="column plates">
-        {projects.map((p) => (
-          <ProjectPlate id={p.id} href={url(lang, 'projects', p.id)} title={p.data.title} year={p.data.year} summary={p.data.summary} link={p.data.link} />
-        ))}
-      </div>
-    </div>
+    <EntryList
+      lang={lang}
+      collection="projects"
+      items={projects.map((p) => ({ id: p.id, href: url(lang, 'projects', p.id), title: p.data.title, year: p.data.year, summary: p.data.summary, where: linkLabel(p.data.link) }))}
+    />
   )}
 </Base>
-
-<style>
-  .plates { display: grid; gap: 1.25rem; }
-</style>

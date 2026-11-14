@@ -1,45 +1,48 @@
 ---
 /**
- * Post/project layout on the margin/column grid. The margin holds the
- * context (kind, week, date, reading time) and, on essays, the reading
- * line. The title's pine rule is the target of the underline transition.
+ * Post/project layout. The heading sits in the contour field; the label
+ * column holds the context (kind, week, date, reading time) and, on essays,
+ * the reading line. The rule under the title is the target of the
+ * underline → heading transition.
  */
 import ReadingLine from './ReadingLine.astro';
-import PressMark from './PressMark.astro';
+import Icon, { type IconName } from './Icon.astro';
 
 interface Props {
   margin: string[];
   title: string;
   ruleName: string;
+  icon: IconName;
   readingLine?: boolean;
 }
-const { margin, title, ruleName, readingLine = false } = Astro.props;
+const { margin, title, ruleName, icon, readingLine = false } = Astro.props;
 ---
 
-<article class="row article" data-reading={readingLine ? '' : undefined}>
-  <div class="margin">
-    {margin.map((line, i) => <span class:list={[i === 0 ? 'margin-title' : 'num']}>{line}</span>)}
-    {readingLine && <ReadingLine />}
-  </div>
-  <div class="column">
+<header class="a-head" data-field>
+  <div class="text" data-field-text>
+    <span class="engraved kicker"><Icon name={icon} />{margin.map((m) => <span>{m}</span>)}</span>
     <h1>{title}</h1>
-    <div class="rule offprint" transition:name={ruleName}></div>
-    <div class:list={['prose', { initial: readingLine }]}><slot /></div>
-    <PressMark class="end" />
+    <div class="rule" transition:name={ruleName}></div>
+  </div>
+</header>
+
+<article class="row article" data-reading={readingLine ? '' : undefined}>
+  <div class="margin">{readingLine && <ReadingLine />}</div>
+  <div class="column">
+    <div class="prose"><slot /></div>
     <slot name="after" />
   </div>
 </article>
 
 <style>
-  .article { padding-top: clamp(1rem, 4vw, 3rem); }
-  .article > .margin { align-self: stretch; align-content: start; padding-top: 0.55rem; }
-  .column :global(.end) { margin-top: 2.5rem; }
-  /* Essays open with a large initial, as in a private-press book. */
-  .initial :global(> article > p:first-of-type::first-letter),
-  .initial :global(> p:first-of-type::first-letter) {
-    -webkit-initial-letter: 3; initial-letter: 3;
-    font-family: var(--f-display); font-weight: 800; color: var(--accent);
-    margin-right: 0.5rem;
-  }
-  .rule { height: 3px; background: var(--accent); margin: 1.5rem 0 2.25rem; }
+  .a-head { padding-block: clamp(40px, 6vw, 88px) clamp(40px, 6vw, 72px); }
+  .text { display: grid; gap: 18px; max-width: 46rem; }
+  .kicker { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+  .kicker .pic { width: 16px; height: 16px; }
+  h1 { font-size: clamp(2.4rem, 1.5rem + 3.2vw, 4rem); }
+  .rule { height: 3px; width: 100%; max-width: 40rem; background: var(--accent); border-radius: 2px; }
+  /* Prose lines up with the heading; the reading line runs in the left gutter. */
+  .article { display: block; position: relative; }
+  .article > .margin { position: absolute; top: 0; bottom: 0; left: calc(-1 * var(--gutter-l) + 8px); width: 12px; padding: 0; display: block; margin: 0; }
+  .article > .column { max-width: 40rem; }
 </style>

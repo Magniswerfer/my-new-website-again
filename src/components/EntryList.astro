@@ -1,18 +1,18 @@
 ---
 /**
- * Dated entries on the margin/column grid. The week number sits in the
- * margin (with the year when it changes). Each title's pine underline
- * carries a view-transition-name that matches the heading rule on the
- * target page, so clicking morphs the underline into the rule.
+ * A list of posts or projects. Each title's underline carries a
+ * view-transition-name that matches the heading rule on the target page,
+ * so clicking it morphs the underline into that rule.
+ * `plain` renders just the items (for use inside a section's content column);
+ * otherwise each item sits on the label/content grid with its week or year.
  */
 import { isoDate, isoWeek, weekLabel, type Lang } from '~/i18n';
 import { ruleName } from '~/lib/content';
 import ReadMark from './ReadMark.astro';
 
-interface Item { id: string; href: string; title: string; date?: Date; year?: number; summary?: string }
-interface Heading { id: string; label: string; href: string }
-interface Props { items: Item[]; collection: 'posts' | 'projects'; lang: Lang; showSummary?: boolean; showYear?: boolean; heading?: Heading }
-const { items, collection, lang, showSummary = false, showYear = false, heading } = Astro.props;
+interface Item { id: string; href: string; title: string; date?: Date; year?: number; summary?: string; where?: string }
+interface Props { items: Item[]; collection: 'posts' | 'projects'; lang: Lang; showSummary?: boolean; showYear?: boolean; plain?: boolean }
+const { items, collection, lang, showSummary = true, showYear = false, plain = false } = Astro.props;
 
 let lastYear: number | undefined;
 const rows = items.map((item) => {
@@ -23,23 +23,25 @@ const rows = items.map((item) => {
 });
 ---
 
-<ol class="entries">
-  {rows.map((item, i) => (
-    <li class:list={['row', { 'has-heading': heading && i === 0 }]} data-href={collection === 'posts' ? item.href : undefined}>
-      <div class="margin">
-        {collection === 'posts' && <ReadMark />}
-        {heading && i === 0 && <a id={heading.id} class="margin-title heading" href={heading.href}>{heading.label}</a>}
-        {item.yearLabel && <span class="margin-title">{item.yearLabel}</span>}
-        {item.date
-          ? <time class="num" datetime={isoDate(item.date)}>{weekLabel(lang, item.date)}</time>
-          : !showYear && item.year && <span class="num">{item.year}</span>}
-      </div>
+<ol class:list={['entries', { plain }]}>
+  {rows.map((item) => (
+    <li class:list={[{ row: !plain }]} data-href={collection === 'posts' ? item.href : undefined}>
+      {!plain && (
+        <div class="margin">
+          {collection === 'posts' && <ReadMark />}
+          {item.yearLabel && <span class="margin-title">{item.yearLabel}</span>}
+          {item.date
+            ? <time class="engraved" datetime={isoDate(item.date)}>{weekLabel(lang, item.date)}</time>
+            : !showYear && item.year && <span class="engraved">{item.year}</span>}
+        </div>
+      )}
       <div class="column">
-        <a href={item.href}>
-          {item.title}
-          <span class="ul offprint" aria-hidden="true" transition:name={ruleName(collection, item.id)}></span>
+        <a class="title" href={item.href}>
+          <span class="t">{item.title}<span class="ul" aria-hidden="true" transition:name={ruleName(collection, item.id)}></span></span>
         </a>
-        {showSummary && item.summary && <p>{item.summary}</p>}
+        {showSummary && item.summary && <p class="summary">{item.summary}</p>}
+        {plain && item.date && <time class="engraved" datetime={isoDate(item.date)}>{weekLabel(lang, item.date)}</time>}
+        {item.where && <p class="engraved where">{item.where}</p>}
       </div>
     </li>
   ))}
@@ -51,19 +53,14 @@ const rows = items.map((item) => {
 </script>
 
 <style>
-  .entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.6rem; }
-  .column { display: grid; gap: 0.45rem; }
-  .column > a {
-    position: relative; justify-self: start; text-decoration: none;
-    font-family: var(--f-display); font-weight: 600; font-size: var(--t-title);
-    letter-spacing: var(--track); line-height: 1.2; padding-bottom: 0.3rem;
-  }
-  .ul { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--accent); transition: height 0.15s; }
-  .column > a:hover .ul { height: 4px; }
-  p { color: var(--muted); max-width: 34rem; }
-  .heading { margin-bottom: 0.35rem; }
-  @media (max-width: 52rem) {
-    .has-heading > .margin { grid-auto-flow: row !important; }
-    .heading { margin-bottom: 0.75rem; }
-  }
+  .entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 28px; }
+  .column { display: grid; gap: 4px; justify-items: start; }
+  .title { text-decoration: none; font-size: var(--t-title); font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
+  .t { position: relative; display: inline-block; padding-bottom: 3px; }
+  /* The underline grows in on hover, in the section's dye. */
+  .ul { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform 0.25s var(--ease); }
+  .title:hover .ul, .title:focus-visible .ul { transform: scaleX(1); }
+  .summary { color: var(--soft); max-width: 40rem; }
+  .where { margin-top: 4px; overflow-wrap: anywhere; }
+  .margin .engraved { padding-top: 6px; }
 </style>

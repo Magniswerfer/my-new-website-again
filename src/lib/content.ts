@@ -50,3 +50,9 @@ export async function getTranslation<C extends 'posts' | 'projects'>(
 export const ruleName = (collection: string, id: string) => `rule-${collection}-${id}`;
 
 export const readingMinutes = (body = '') => Math.max(1, Math.round(body.split(/\s+/).filter(Boolean).length / 220));
+
+/** A link shown as plain text: host and path, no protocol or trailing slash. */
+export const linkLabel = (link?: string) => {
+  if (!link) return undefined;
+  try { const u = new URL(link); return (u.host + u.pathname).replace(/\/$/, ''); } catch { return undefined; }
+};

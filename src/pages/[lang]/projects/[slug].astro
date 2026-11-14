@@ -19,6 +19,7 @@ const alternate = translation ? url(translation.data.lang, 'projects', translati
 
 <Base lang={lang} title={project.data.title} description={project.data.summary} alternate={alternate} current="projects">
   <Article
+    icon="projects"
     margin={[t(lang, 'projects.title').replace(/er$|s$/, ''), String(project.data.year)]}
     title={project.data.title}
     ruleName={ruleName('projects', project.id)}

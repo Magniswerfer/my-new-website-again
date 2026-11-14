@@ -1,0 +1,180 @@
+---
+/**
+ * The living threads. One canvas behind the header and page content:
+ * - a contour field of fine lines that gather into strands and fan out again,
+ *   with a few lines dyed in each section's colour; it runs from behind the
+ *   header through the hero (homepage) or the page heading (other pages);
+ * - behind every element marked [data-thread="<section>"], a soft band of
+ *   that section's threads drifting across the page.
+ * The thread counts come from the real content, so the page grows as
+ * things are added. Motion can be stopped with the footer keys, and is off
+ * with reduced motion.
+ */
+import { getCollection } from 'astro:content';
+import { getPosts, getProjects, getPhotos, getBooks, getWeeks } from '~/lib/content';
+import type { Lang } from '~/i18n';
+
+interface Props { lang: Lang; variant?: 'home' | 'page' }
+const { lang, variant = 'page' } = Astro.props;
+
+const counts = {
+  projects: (await getProjects(lang)).length,
+  blog: (await getPosts(lang)).length,
+  photos: (await getPhotos()).length,
+  weeks: (await getWeeks()).length,
+  rotation: (await getBooks()).length,
+  about: (await getCollection('pages')).filter((p) => p.id.startsWith('about')).length > 0 ? 1 : 0,
+};
+---
+
+<canvas class="threads" data-threads={JSON.stringify(counts)} data-variant={variant} aria-hidden="true"></canvas>
+
+<style>
+  .threads { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; z-index: 0; }
+</style>
+
+<script>
+  type Counts = Record<string, number>;
+  const ORDER = ['projects', 'blog', 'photos', 'weeks', 'rotation', 'about'];
+  const STRANDS = 6;
+  let stop: (() => void) | undefined;
+
+  function motionOn() {
+    try { return localStorage.getItem('mhk:motion') !== 'off'; } catch { return true; }
+  }
+
+  function init() {
+    stop?.();
+    const found = document.querySelector<HTMLCanvasElement>('canvas[data-threads]');
+    if (!found) return;
+    const cv: HTMLCanvasElement = found;
+    const stage = cv.parentElement as HTMLElement;
+    const g = cv.getContext('2d')!;
+    const counts: Counts = JSON.parse(cv.dataset.threads!);
+    const home = cv.dataset.variant === 'home';
+    const sections = ORDER.map((k) => ({ k, items: counts[k] ?? 0, n: (4 + (counts[k] ?? 0) * 4) * STRANDS }));
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const t0 = performance.now();
+    let W = 0, H = 0, fieldH = 0, raf = 0, visible = true;
+    let textBox: { left: number; right: number; top: number; bottom: number } | null = null;
+    let bands: { k: string; items: number; n: number; top: number; h: number }[] = [];
+    let colors: Record<string, string> = {};
+
+    const css = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const rgb = (hex: string) => {
+      let h = hex.replace('#', '');
+      if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+      const v = parseInt(h, 16);
+      return `${(v >> 16) & 255},${(v >> 8) & 255},${v & 255}`;
+    };
+
+    function measure() {
+      const r = stage.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = Math.round(r.width); H = Math.round(r.height);
+      cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const field = stage.querySelector<HTMLElement>('[data-field]');
+      fieldH = field ? field.getBoundingClientRect().bottom - r.top : Math.min(H, 420);
+      const text = stage.querySelector<HTMLElement>('[data-field-text]');
+      if (text) {
+        const b = text.getBoundingClientRect();
+        textBox = { left: b.left - r.left, right: b.right - r.left, top: b.top - r.top, bottom: b.bottom - r.top };
+      } else textBox = null;
+      bands = [];
+      stage.querySelectorAll<HTMLElement>('[data-thread]').forEach((el) => {
+        const s = sections.find((x) => x.k === el.dataset.thread);
+        if (!s) return;
+        const b = el.getBoundingClientRect();
+        bands.push({ ...s, top: b.top - r.top, h: b.height });
+      });
+      colors = { ink: css('--ink') };
+      ORDER.forEach((k) => (colors[k] = css('--' + k)));
+    }
+
+    function smooth(pts: number[][]) {
+      g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length - 1; i++) {
+        g.quadraticCurveTo(pts[i][0], pts[i][1], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2);
+      }
+      const l = pts[pts.length - 1]; g.lineTo(l[0], l[1]); g.stroke();
+    }
+
+    function draw(time: number) {
+      g.clearRect(0, 0, W, H);
+      const mobile = W < 760, lines = home ? 84 : 60, Hh = fieldH;
+      const dyed: string[] = [];
+      sections.forEach((s) => { for (let j = 0; j < Math.round(s.n / STRANDS / 2); j++) dyed.push(s.k); });
+      const dyedAt: Record<number, string> = {};
+      dyed.forEach((k, d) => (dyedAt[Math.round(6 + (d * (lines - 12)) / dyed.length)] = k));
+      const ca = mobile ? 0.16 : home ? 0.22 : 0.3, cb = mobile ? 0.74 : home ? 0.74 : 0.68, sp = mobile ? 1.35 : home ? 1.3 : 0.9;
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      for (let k = 0; k < lines; k++) {
+        const key = dyedAt[k], f = k / (lines - 1) - 0.5, pts: number[][] = [];
+        for (let x = -20; x <= W + 20; x += 14) {
+          const u = x / W;
+          const cA = Hh * (ca + 0.14 * Math.sin(u * 3.1 + time * 0.12));
+          const cB = Hh * (cb + 0.14 * Math.sin(u * 2.3 - time * 0.1 + 1.7));
+          const sA = Hh * sp * (0.06 + 0.7 * Math.pow(0.5 + 0.5 * Math.sin(u * 4.2 + time * 0.16), 2));
+          const sB = Hh * sp * (0.05 + 0.6 * Math.pow(0.5 + 0.5 * Math.cos(u * 3.3 - time * 0.14), 2));
+          const m = 0.5 + 0.5 * Math.sin(u * 2.6 + time * 0.09 + f * 2.2);
+          pts.push([x, (1 - m) * (cA + sA * f) + m * (cB - sB * f) + Math.sin(u * 14 + k * 0.4) * 1.5]);
+        }
+        g.strokeStyle = key ? colors[key] : colors.ink;
+        g.globalAlpha = key ? 0.8 : 0.2; g.lineWidth = key ? 1.6 : 1;
+        smooth(pts);
+      }
+      g.globalAlpha = 1;
+      // Keep the headline clear.
+      if (textBox) {
+        g.save(); g.globalCompositeOperation = 'destination-out';
+        const { left, right, top, bottom } = textBox;
+        if (mobile) {
+          const v = g.createLinearGradient(0, top - 40, 0, bottom + 50);
+          v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(0.2, 'rgba(0,0,0,0.75)');
+          v.addColorStop(0.8, 'rgba(0,0,0,0.75)'); v.addColorStop(1, 'rgba(0,0,0,0)');
+          g.fillStyle = v; g.fillRect(0, top - 40, W, bottom - top + 90);
+        } else {
+          const h = g.createLinearGradient(left, 0, right + 80, 0);
+          h.addColorStop(0, 'rgba(0,0,0,0.97)'); h.addColorStop(0.8, 'rgba(0,0,0,0.92)'); h.addColorStop(1, 'rgba(0,0,0,0)');
+          g.fillStyle = h; g.fillRect(0, top - 30, right + 80, bottom - top + 60);
+        }
+        g.restore();
+      }
+      // Section bands, in the background.
+      bands.forEach((s, si) => {
+        const n = s.n / STRANDS, width = 10 + s.items * 18, c = rgb(colors[s.k]);
+        const grd = g.createLinearGradient(0, 0, W, 0);
+        grd.addColorStop(0, `rgba(${c},0.1)`);
+        grd.addColorStop(mobile ? 0.25 : 0.45, `rgba(${c},0.42)`);
+        grd.addColorStop(1, `rgba(${c},0.85)`);
+        g.strokeStyle = grd; g.lineWidth = 1;
+        for (let j = 0; j < n; j++) {
+          const o = (j / Math.max(1, n - 1) - 0.5) * width, pts: number[][] = [];
+          for (let x = -10; x <= W + 10; x += 20) {
+            const u = x / W;
+            pts.push([x, s.top + s.h * (0.2 + 0.6 * u) + Math.sin(u * 3.4 + time * 0.14 + si) * s.h * 0.12
+              + o * (0.7 + 0.3 * Math.sin(u * 2.2 - time * 0.1)) + Math.sin(u * 11 + j) * 1.2]);
+          }
+          smooth(pts);
+        }
+      });
+    }
+
+    const loop = (now: number) => {
+      if (visible && !reduce && motionOn()) draw((now - t0) / 1000);
+      raf = requestAnimationFrame(loop);
+    };
+    const redraw = () => { measure(); draw((performance.now() - t0) / 1000 + 3); };
+    const ro = new ResizeObserver(redraw);
+    const io = new IntersectionObserver((e) => (visible = e[0].isIntersecting));
+    const mq = matchMedia('(prefers-color-scheme: dark)');
+    measure(); draw(3); ro.observe(stage); io.observe(stage);
+    mq.addEventListener('change', redraw);
+    document.fonts?.ready.then(redraw);
+    raf = requestAnimationFrame(loop);
+    stop = () => { cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); mq.removeEventListener('change', redraw); };
+  }
+
+  document.addEventListener('astro:page-load', init);
+  document.addEventListener('astro:before-swap', () => stop?.());
+</script>

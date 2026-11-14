@@ -25,7 +25,7 @@ const alternate = translation ? url(translation.data.lang, 'blog', translation.i
 ---
 
 <Base lang={lang} title={post.data.title} description={post.data.summary} alternate={alternate} current="blog">
-  <Article margin={margin} title={post.data.title} ruleName={ruleName('posts', post.id)} readingLine={isEssay}>
+  <Article icon="blog" margin={margin} title={post.data.title} ruleName={ruleName('posts', post.id)} readingLine={isEssay}>
     <Content />
     <p slot="after" class="translation">
       {translation

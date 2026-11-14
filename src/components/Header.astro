@@ -1,96 +1,129 @@
 ---
+/**
+ * The header: name, and the section keys in a recessed strip, each with an
+ * LED that is lit on the current page. On phones a MENU key opens the keys
+ * as a full-page sheet and turns into CLOSE.
+ */
+import Icon, { type IconName } from './Icon.astro';
 import { t, url, other, type Lang } from '~/i18n';
 
 interface Props { lang: Lang; alternate: string; current?: string }
 const { lang, alternate, current } = Astro.props;
 
-const items = [
-  ['blog', 'nav.writing'],
-  ['weeks', 'nav.weeks'],
-  ['projects', 'nav.projects'],
-  ['photos', 'nav.photos'],
-  ['rotation', 'nav.bookshelf'],
-  ['about', 'nav.about'],
-] as const;
+const items: [string, IconName, Parameters<typeof t>[1]][] = [
+  ['blog', 'blog', 'nav.writing'],
+  ['weeks', 'weeks', 'nav.weeks'],
+  ['projects', 'projects', 'nav.projects'],
+  ['photos', 'photos', 'nav.photos'],
+  ['rotation', 'rotation', 'nav.bookshelf'],
+  ['about', 'about', 'nav.about'],
+];
 ---
 
-<header class="wrap row">
-  <div class="margin">
-    <a class="mark" href={url(lang)}>Magnus H. Kaspersen<span class="dot" aria-hidden="true"></span></a>
+<header class="head" data-head>
+  <div class="wrap head-in">
+    <div class="bar">
+      <a class="name" href={url(lang)}>Magnus H. Kaspersen</a>
+      <button type="button" class="key menu-key" data-menu-key aria-expanded="false" aria-controls="site-menu"
+        data-open-label={t(lang, 'menu.close')} data-closed-label={t(lang, 'menu.open')}>
+        <span class="led"></span><span data-menu-label>{t(lang, 'menu.open')}</span>
+      </button>
+    </div>
+    <div class="fold" id="site-menu">
+      <nav aria-label={lang === 'da' ? 'Hovedmenu' : 'Main'}>
+        <ul>
+          {items.map(([slug, icon, key]) => (
+            <li>
+              <a class="nav-key" href={url(lang, slug)} aria-current={current === slug ? 'page' : undefined}>
+                <Icon name={icon} /><span>{t(lang, key)}</span><span class="led" aria-hidden="true"></span>
+              </a>
+            </li>
+          ))}
+          <li class="lang-li">
+            <a class="lang" href={alternate} hreflang={other(lang)} lang={other(lang)} data-astro-reload data-lang-switch={other(lang)}>
+              {t(lang, 'lang.switch')}
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
   </div>
-  <nav class="column" aria-label={lang === 'da' ? 'Hovedmenu' : 'Main'}>
-    <ul>
-      {items.map(([slug, key]) => (
-        <li><a href={url(lang, slug)} aria-current={current === slug ? 'page' : undefined}>{t(lang, key)}</a></li>
-      ))}
-      <li class="lang">
-        <a
-          class="switch" href={alternate} hreflang={other(lang)} data-astro-reload
-          data-lang-switch={other(lang)} data-pos={lang} aria-label={t(lang, 'lang.switchLabel')}
-        >
-          <span class="opt en" aria-hidden="true">EN</span>
-          <span class="track" aria-hidden="true"><span class="knob"></span></span>
-          <span class="opt da" aria-hidden="true">DA</span>
-        </a>
-      </li>
-    </ul>
-  </nav>
 </header>
 
 <script>
-  // The language switch: remember the choice (so the root URL respects it),
-  // slide the knob across, then go to the same page in the other language.
+  function setOpen(open: boolean) {
+    const head = document.querySelector<HTMLElement>('[data-head]');
+    const key = document.querySelector<HTMLButtonElement>('[data-menu-key]');
+    if (!head || !key) return;
+    head.toggleAttribute('data-open', open);
+    key.setAttribute('aria-expanded', String(open));
+    key.querySelector('[data-menu-label]')!.textContent = open ? key.dataset.openLabel! : key.dataset.closedLabel!;
+    document.documentElement.style.overflow = open ? 'hidden' : '';
+  }
   document.addEventListener('click', (e) => {
-    const a = (e.target as Element).closest<HTMLAnchorElement>('[data-lang-switch]');
-    if (!a) return;
-    const to = a.dataset.langSwitch!;
-    try { localStorage.setItem('lang', to); } catch {}
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    e.preventDefault();
-    a.dataset.pos = to;
-    setTimeout(() => location.assign(a.href), 220);
+    const el = e.target as Element;
+    if (el.closest('[data-menu-key]')) {
+      setOpen(!document.querySelector('[data-head]')?.hasAttribute('data-open'));
+      return;
+    }
+    // Remember an explicit language choice so the root URL respects it next time.
+    const lang = el.closest<HTMLElement>('[data-lang-switch]');
+    if (lang) try { localStorage.setItem('lang', lang.dataset.langSwitch!); } catch {}
   });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+  document.addEventListener('astro:before-swap', () => { document.documentElement.style.overflow = ''; });
 </script>
 
 <style>
-  /* A book's running head: name, contents and a double rule. */
-  header { padding-block: clamp(1.25rem, 3vw, 2rem) 0.9rem; align-items: baseline; position: relative; }
-  header::after { content: ''; position: absolute; left: var(--gutter-l); right: var(--gutter-r); bottom: 0; height: 4px; border-block: 1px solid var(--rule); }
-  .margin { padding-top: 0 !important; }
-  .mark {
-    font-family: var(--f-display); font-weight: 800; font-size: var(--t-body);
-    letter-spacing: var(--track); line-height: 1.15; text-decoration: none; display: inline-block; white-space: nowrap;
+  .head { position: relative; z-index: 5; }
+  .head-in { display: flex; align-items: center; justify-content: space-between; min-height: 84px; gap: 24px; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .name { font-weight: 700; font-size: 1.19rem; text-decoration: none; letter-spacing: -0.005em; white-space: nowrap; }
+  .menu-key { display: none; }
+
+  /* Desktop: one row of keys in a recessed strip. */
+  ul {
+    list-style: none; margin: 0; display: flex; align-items: center; gap: 8px; padding: 6px;
+    border-radius: 999px; background: var(--recess-strip);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.18), 0 1px 0 rgb(255 255 255 / 0.4);
   }
-  /* The name's dot is a steady indicator light. */
-  .dot {
-    display: inline-block; width: 0.4em; height: 0.4em; border-radius: 50%;
-    background: var(--signal); margin-left: 0.32em; vertical-align: 0.05em;
-    box-shadow: inset 0 -1px 1px rgb(0 0 0 / 0.2), 0 0 6px var(--glow);
+  .nav-key {
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px 8px 13px; border-radius: 999px;
+    font-size: 0.85rem; font-weight: 500; color: var(--ink); text-decoration: none; white-space: nowrap;
+    background: linear-gradient(180deg, var(--key-top), var(--key-bottom));
+    box-shadow: 0 1.5px 0 var(--key-shadow), inset 0 -1px 0 rgb(0 0 0 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.5);
+    transition: transform 0.06s, box-shadow 0.06s;
   }
-  ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.2rem 1.4rem; }
-  nav a { text-decoration: none; font-size: 0.97rem; }
-  nav a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
-  nav a[aria-current='page'] { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 0.35em; }
-  /* EN/DA slide switch: a recessed track with a raised knob. */
-  .switch { display: inline-flex; align-items: center; gap: 0.45rem; text-decoration: none !important; }
-  .opt { font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.02em; color: var(--muted); transition: color 0.18s; }
-  .switch[data-pos='en'] .en, .switch[data-pos='da'] .da { color: var(--ink); }
-  .track {
-    position: relative; width: 2.1rem; height: 1.15rem; border-radius: 999px;
-    background: var(--hole); box-shadow: inset 0 1px 2px var(--hole-shade), inset 0 0 0 1px var(--rule);
-  }
-  .knob {
-    position: absolute; top: 2px; left: 2px; width: calc(1.15rem - 4px); height: calc(1.15rem - 4px); border-radius: 50%;
-    background: var(--knob);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.5);
-    transition: transform 0.2s var(--ease);
-  }
-  .switch[data-pos='da'] .knob { transform: translateX(calc(2.1rem - 1.15rem)); }
-  .switch:hover .knob { box-shadow: 0 1px 3px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.5); }
-  @media (prefers-reduced-motion: reduce) { .knob, .opt { transition: none; } }
-  @media (max-width: 52rem) {
-    header { row-gap: 0.75rem; }
-    .mark { font-size: 1.25rem; }
+  .nav-key:hover { transform: translateY(1px); box-shadow: 0 0.5px 0 var(--key-shadow), inset 0 -1px 0 rgb(0 0 0 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.5); }
+  .nav-key:active { transform: translateY(1.5px); box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.2); }
+  .nav-key .pic { width: 17px; height: 17px; }
+  .nav-key .led { width: 6px; height: 6px; margin-left: 2px; }
+  .nav-key[aria-current] .led { background: var(--led); box-shadow: 0 0 6px var(--led); }
+  .lang { padding: 0 12px 0 8px; font-size: 0.85rem; color: var(--soft); text-decoration: none; white-space: nowrap; }
+  .lang:hover { color: var(--ink); }
+
+  @media (max-width: 72rem) {
+    .head-in { display: block; min-height: 0; }
+    .bar { padding-block: 16px; position: relative; z-index: 2; }
+    .menu-key { display: inline-flex; }
+    .head[data-open] .bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      padding: calc(16px + env(safe-area-inset-top, 0px)) var(--gutter-r) 16px var(--gutter-l);
+    }
+    /* The menu is a full-page sheet in the page colour that unrolls from the top. */
+    .fold {
+      position: fixed; inset: 0; z-index: 1; overflow-y: auto; background: var(--body);
+      padding: calc(92px + env(safe-area-inset-top, 0px)) var(--gutter-r) calc(32px + env(safe-area-inset-bottom, 0px)) var(--gutter-l);
+      clip-path: inset(0 0 100% 0); visibility: hidden;
+      transition: clip-path 0.36s var(--ease), visibility 0s 0.36s;
+    }
+    .head[data-open] .fold { clip-path: inset(0); visibility: visible; transition: clip-path 0.36s var(--ease); }
+    ul { flex-direction: column; align-items: stretch; gap: 10px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+    .nav-key { display: flex; width: 100%; gap: 12px; padding: 13px 18px; font-size: 1rem; }
+    .nav-key .pic { width: 20px; height: 20px; }
+    .nav-key .led { margin-left: auto; }
+    .lang-li { text-align: center; padding-top: 10px; }
+    .lang { font-size: 0.9rem; }
+    @media (prefers-reduced-motion: reduce) { .fold, .head[data-open] .fold { transition: none; } }
   }
 </style>

@@ -1,18 +1,24 @@
 ---
-interface Props { title: string; intro?: string }
-const { title, intro } = Astro.props;
+/** A page heading: the one loud thing on the page. The contour field runs behind it. */
+import Icon, { type IconName } from './Icon.astro';
+
+interface Props { title: string; intro?: string; icon?: IconName; label?: string }
+const { title, intro, icon, label } = Astro.props;
 ---
 
-<header class="row head">
-  <div class="margin"><slot name="margin" /></div>
-  <div class="column">
+<header class="head" data-field>
+  <div class="text" data-field-text>
+    {(icon || label) && <span class="engraved kicker">{icon && <Icon name={icon} />}{label}</span>}
     <h1>{title}</h1>
     {intro && <p class="intro">{intro}</p>}
+    <slot />
   </div>
 </header>
 
 <style>
-  .head { padding-block: clamp(1rem, 4vw, 3rem) clamp(2rem, 5vw, 3.5rem); }
-  .head > .margin { padding-top: 1rem; }
-  .intro { margin-top: 1rem; font-size: 1.1875rem; line-height: 1.5; color: var(--muted); max-width: 34em; }
+  .head { padding-block: clamp(40px, 6vw, 88px) clamp(56px, 8vw, 110px); }
+  .text { display: grid; gap: 18px; max-width: 36rem; }
+  .kicker { display: inline-flex; align-items: center; gap: 8px; }
+  .kicker .pic { width: 16px; height: 16px; }
+  .intro { font-size: var(--t-lead); line-height: 1.4; color: var(--ink); max-width: 30ch; }
 </style>

@@ -1,0 +1,7 @@
+---
+export type IconName = 'blog' | 'weeks' | 'projects' | 'photos' | 'rotation' | 'about';
+interface Props { name: IconName; class?: string }
+const { name, class: cls } = Astro.props;
+---
+
+<svg class:list={['pic', `c-${name}`, cls]} aria-hidden="true"><use href={`#i-${name}`} /></svg>

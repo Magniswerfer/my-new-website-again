@@ -7,7 +7,7 @@
 ---
 
 <div class="reading-line" aria-hidden="true">
-  <div class="track"><div class="fill offprint"></div><div class="tip"></div></div>
+  <div class="track"><div class="fill"></div><div class="tip"></div></div>
 </div>
 
 <style>
@@ -16,7 +16,7 @@
   @media (max-width: 52rem) {
     .reading-line { position: fixed; top: 20vh; left: max(4px, env(safe-area-inset-left, 0px)); margin: 0; z-index: 2; }
   }
-  .track { position: absolute; inset: 0; left: 3.5px; width: 2px; background: var(--rule); border-radius: 2px; }
+  .track { position: absolute; inset: 0; left: 3.5px; width: 2px; background: var(--groove-strong); border-radius: 2px; }
   .fill { position: absolute; inset: 0; background: var(--accent); transform-origin: top; transform: scaleY(var(--p, 0)); border-radius: 2px; }
   .tip {
     position: absolute; left: 50%; top: calc(var(--p, 0) * 100%);

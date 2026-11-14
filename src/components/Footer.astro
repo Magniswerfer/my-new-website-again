@@ -9,15 +9,14 @@ const year = new Date().getFullYear();
 const rss = url(lang, 'rss.xml').slice(0, -1);
 ---
 
-<footer class="endpaper">
-<div class="wrap row">
-  <div class="margin">
-    <p class="margin-title">{t(lang, 'footer.follow')}</p>
-  </div>
-  <div class="column">
+<footer class="foot">
+  <div class="wrap f-in">
+    <span class="engraved">{t(lang, 'footer.follow')}</span>
     <p>
       {settings.email && <>{t(lang, 'footer.write')} <a href={`mailto:${settings.email}`}>{settings.email}</a> {t(lang, 'footer.orForm')} </>}
-      <a href={url(lang, 'contact')}>{t(lang, 'footer.form')}</a>.{' '}
+      <a href={url(lang, 'contact')}>{t(lang, 'footer.form')}</a>.
+    </p>
+    <p>
       {t(lang, 'footer.follow2')} <a href={rss}>RSS</a>{settings.links.length > 0 && <>, {lang === 'da' ? 'og jeg er også på' : 'and I’m also on'} {settings.links.map((l, i) => <>{i > 0 && (i === settings.links.length - 1 ? (lang === 'da' ? ' og ' : ' and ') : ', ')}<a href={l.url} rel="me">{l.label}</a></>)}</>}.
     </p>
 
@@ -27,56 +26,59 @@ const rss = url(lang, 'rss.xml').slice(0, -1);
         <div class="field">
           <input id="bd-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com" />
           <input type="hidden" name="tag" value={lang} />
-          <button type="submit">{t(lang, 'footer.subscribe')}</button>
+          <button type="submit" class="key">{t(lang, 'footer.subscribe')}</button>
         </div>
       </form>
     )}
 
-    <p class="small-row">
-      <span class="num small">© {year} Magnus H. Kaspersen</span>
-      <button type="button" class="case-toggle" data-case-toggle aria-expanded="false" aria-keyshortcuts="G">{t(lang, 'case.open')}</button>
-    </p>
+    <div class="controls">
+      <div class="motion" role="group" aria-label={t(lang, 'motion.label')}>
+        <span class="engraved">{t(lang, 'motion.label')}</span>
+        <button type="button" class="key small" data-motion="on" aria-pressed="true"><span class="led"></span>{t(lang, 'motion.play')}</button>
+        <button type="button" class="key small" data-motion="off" aria-pressed="false">{t(lang, 'motion.stop')}</button>
+      </div>
+      <span class="engraved">© {year} Magnus H. Kaspersen</span>
+    </div>
   </div>
-</div>
 </footer>
 
+<script>
+  function sync() {
+    let on = true;
+    try { on = localStorage.getItem('mhk:motion') !== 'off'; } catch {}
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) on = false;
+    document.querySelectorAll<HTMLButtonElement>('[data-motion]').forEach((b) =>
+      b.setAttribute('aria-pressed', String((b.dataset.motion === 'on') === on)));
+  }
+  document.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLButtonElement>('[data-motion]');
+    if (!b) return;
+    try { localStorage.setItem('mhk:motion', b.dataset.motion!); } catch {}
+    sync();
+  });
+  document.addEventListener('astro:page-load', sync);
+</script>
+
 <style>
-  /* The endpaper: every page ends on indigo with a drawn vine, the way
-     Morris's books end on patterned endpapers. Tokens are re-set so the
-     text and controls read on the dark field. */
-  .endpaper {
-    --ink: #ecebe6; --muted: #b7bdd4; --accent: #ecebe6; --accent-ghost: rgb(236 235 230 / 0.35);
-    --rule: rgb(236 235 230 / 0.22); --hole: rgb(255 255 255 / 0.08); --hole-shade: rgb(0 0 0 / 0.35); --paper: var(--endpaper);
-    margin-top: calc(var(--block) * 1.5);
-    padding-block: clamp(2.5rem, 6vw, 4.5rem) calc(3rem + env(safe-area-inset-bottom, 0px));
-    background-color: var(--endpaper); color: var(--ink);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='168' height='112' viewBox='0 0 168 112'%3E%3Cg fill='none' stroke='%23ecebe6' stroke-opacity='.13' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M0 56c21-28 42-28 63 0s42 28 63 0 28-28 42 0'/%3E%3Cpath d='M30 35c-2-9 4-15 13-15-1 9-6 14-13 15zM90 78c8 2 12 9 9 17-8-2-12-9-9-17zM118 46c4-8 12-10 19-6-4 8-12 10-19 6z'/%3E%3Cpath d='M43 20c3-5 8-8 14-8M99 95c2 5 6 8 11 9' /%3E%3C/g%3E%3Cg fill='%23e06a5c' fill-opacity='.42'%3E%3Ccircle cx='58' cy='12' r='2.6'/%3E%3Ccircle cx='111' cy='105' r='2.6'/%3E%3C/g%3E%3Cg fill='%23ecebe6' fill-opacity='.1'%3E%3Ccircle cx='14' cy='88' r='1.6'/%3E%3Ccircle cx='150' cy='22' r='1.6'/%3E%3C/g%3E%3C/svg%3E");
-    background-size: 168px 112px;
+  /* Horizontal grooves that fade in from the top. */
+  .foot { position: relative; margin-top: var(--block); }
+  .foot::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image: repeating-linear-gradient(180deg, transparent 0 6px, var(--groove-strong) 6px 7px);
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 85%); mask-image: linear-gradient(180deg, transparent, #000 85%);
   }
-  .endpaper a { text-decoration-color: rgb(236 235 230 / 0.5); }
-  .endpaper a:hover { text-decoration-color: currentColor; }
-  .column { display: grid; gap: 1.25rem; }
-  .column > p:first-child { max-width: 36rem; }
-  form { display: grid; gap: 0.5rem; max-width: 30rem; }
-  label { color: var(--muted); font-size: 0.95rem; }
-  .field { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .f-in { position: relative; display: grid; gap: 8px; padding-block: 56px calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .f-in > .engraved { margin-bottom: 6px; }
+  .f-in p { max-width: 40rem; }
+  form { display: grid; gap: 8px; max-width: 30rem; margin-top: 18px; }
+  label { color: var(--soft); font-size: 0.95rem; }
+  .field { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   input[type='email'] {
-    flex: 1 1 14rem; min-width: 0; font: inherit; color: var(--ink); background: transparent;
-    border: 0; border-bottom: 1.5px solid var(--ink); padding: 0.4rem 0;
+    flex: 1 1 14rem; min-width: 0; font: inherit; color: var(--ink); background: var(--paper-deep);
+    border: 0; border-radius: 999px; padding: 0.6rem 1rem; box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.15);
   }
-  input[type='email']:focus { outline: none; border-bottom-color: var(--accent); }
-  button {
-    font: 600 0.95rem/1 var(--f-text); color: var(--paper); background: var(--ink); border: 0;
-    padding: 0.7rem 1.1rem; cursor: pointer;
-    border-radius: 6px; box-shadow: 0 2px 0 var(--hole-shade);
-  }
-  button:active { box-shadow: 0 1px 0 var(--hole-shade); }
-  button:hover { background: var(--accent); }
-  .small { font-size: 0.75rem; }
-  .small-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; }
-  .case-toggle {
-    font: 500 0.75rem/1 var(--f-text); color: var(--muted); background: transparent;
-    border: 1px dashed var(--accent-ghost); border-radius: 6px; padding: 0.45rem 0.65rem; cursor: pointer; box-shadow: none;
-  }
-  .case-toggle:hover, .case-toggle[aria-expanded='true'] { color: var(--ink); border-color: var(--ink); background: transparent; }
+  input[type='email']:focus { outline: 2px solid var(--accent); }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; margin-top: 22px; }
+  .motion { display: flex; align-items: center; gap: 12px; }
+  .motion .engraved { margin-right: 4px; }
 </style>

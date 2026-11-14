@@ -1,21 +1,16 @@
 ---
-/**
- * Shown where a list has nothing in it yet. Sits on the same
- * margin/column grid as the entries it stands in for, so a page
- * looks like a notebook with a blank page, not a broken one.
- */
-interface Props { text: string }
-const { text } = Astro.props;
+/** Shown where a list has nothing in it yet. */
+interface Props { text: string; plain?: boolean }
+const { text, plain = false } = Astro.props;
 ---
 
-<div class="row empty">
-  <div class="margin"><span class="num" aria-hidden="true">—</span></div>
-  <p class="column">{text}</p>
-</div>
+{plain ? <p class="empty">{text}</p> : (
+  <div class="row">
+    <div class="margin"></div>
+    <p class="column empty">{text}</p>
+  </div>
+)}
 
 <style>
-  .empty p {
-    color: var(--muted); max-width: 34rem;
-    padding-top: 0.9rem; border-top: 1px dashed var(--rule);
-  }
+  .empty { color: var(--soft); max-width: 40rem; }
 </style>
