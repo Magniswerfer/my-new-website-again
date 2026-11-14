@@ -54,7 +54,9 @@ const items = [
 </script>
 
 <style>
-  header { padding-block: clamp(1.25rem, 3vw, 2.25rem); align-items: baseline; }
+  /* A book's running head: name, contents and a double rule. */
+  header { padding-block: clamp(1.25rem, 3vw, 2rem) 0.9rem; align-items: baseline; position: relative; }
+  header::after { content: ''; position: absolute; left: var(--gutter-l); right: var(--gutter-r); bottom: 0; height: 4px; border-block: 1px solid var(--rule); }
   .margin { padding-top: 0 !important; }
   .mark {
     font-family: var(--f-display); font-weight: 800; font-size: var(--t-body);

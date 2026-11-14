@@ -134,6 +134,17 @@ Both respect `prefers-reduced-motion` (no animation; the end state is shown). Co
 - **Sidenotes:** in Keystatic, select words in a post and add a Sidenote; it sits in the margin beside the line, and opens in place on phones
 - **Open the case:** a footer button (or the G key) shows how the page is built: grid outlines, baseline, heading levels and a card with the grid measured live and the palette
 
+## The workshop book (Nov 2026 reimagining)
+
+The site is a book from a small private press in the spirit of Morris, documenting a maker-scholar's work, with Braun-precise instruments set into its pages.
+
+- **Open book (homepage):** a two-page spread. The left page (verso) is the *mind*: this week, the weeks grille, blog, rotation. The right page (recto) is the *hand*: projects and photos. A binding with a sewn thread runs between them; below two-page width the book closes to one page and the binding becomes a stitched seam
+- **Instrument plates (projects):** each project is a nameplate held by four screws at different angles; pointing at a plate turns them a quarter, as if about to open it up
+- **Endpaper (footer):** every page ends on deep indigo with a hand-drawn vine and madder berries; the one loud colour moment
+- **Running head:** name, contents and a double rule at the top of every page
+- **Press mark:** a leaf sprig (indigo, one madder berry) closes every post and project
+- **Initials:** essays open with a three-line indigo initial
+
 ## Type hierarchy
 
 | Level | Role | Style |

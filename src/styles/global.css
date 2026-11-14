@@ -41,6 +41,12 @@
   --hole: #d6d6d0;
   --hole-shade: rgb(28 34 51 / 0.22);
   --knob: #fafaf8;
+  /* The book: plates, the binding's fold and thread, the endpaper. */
+  --plate: #f4f3ef;
+  --fold: rgb(28 34 51 / 0.035);
+  --fold-deep: rgb(28 34 51 / 0.08);
+  --thread: rgb(28 34 51 / 0.28);
+  --endpaper: #22376b;
   --grain-opacity: 0.09;
   --grain-blend: multiply;
 
@@ -60,7 +66,7 @@
   --margin: 13.5rem;
   --gap: clamp(1.25rem, 3vw, 3rem);
   --column: 42rem;
-  --page: calc(var(--margin) + var(--gap) + var(--column) + 12rem);
+  --page: calc(13.5rem + 3rem + 42rem + 16rem);
   --gutter-l: max(20px, env(safe-area-inset-left, 0px));
   --gutter-r: max(20px, env(safe-area-inset-right, 0px));
   --block: clamp(3rem, 2rem + 4vw, 6rem);
@@ -85,6 +91,11 @@
     --hole: #242733;
     --hole-shade: rgb(0 0 0 / 0.55);
     --knob: #4a4d5c;
+    --plate: #191c26;
+    --fold: rgb(0 0 0 / 0.18);
+    --fold-deep: rgb(0 0 0 / 0.38);
+    --thread: rgb(231 230 239 / 0.22);
+    --endpaper: #0b0e17;
     --grain-opacity: 0.06;
     --grain-blend: screen;
     color-scheme: dark;

@@ -5,6 +5,7 @@
  * line. The title's pine rule is the target of the underline transition.
  */
 import ReadingLine from './ReadingLine.astro';
+import PressMark from './PressMark.astro';
 
 interface Props {
   margin: string[];
@@ -23,7 +24,8 @@ const { margin, title, ruleName, readingLine = false } = Astro.props;
   <div class="column">
     <h1>{title}</h1>
     <div class="rule offprint" transition:name={ruleName}></div>
-    <div class="prose"><slot /></div>
+    <div class:list={['prose', { initial: readingLine }]}><slot /></div>
+    <PressMark class="end" />
     <slot name="after" />
   </div>
 </article>
@@ -31,5 +33,13 @@ const { margin, title, ruleName, readingLine = false } = Astro.props;
 <style>
   .article { padding-top: clamp(1rem, 4vw, 3rem); }
   .article > .margin { align-self: stretch; align-content: start; padding-top: 0.55rem; }
+  .column :global(.end) { margin-top: 2.5rem; }
+  /* Essays open with a large initial, as in a private-press book. */
+  .initial :global(> article > p:first-of-type::first-letter),
+  .initial :global(> p:first-of-type::first-letter) {
+    -webkit-initial-letter: 3; initial-letter: 3;
+    font-family: var(--f-display); font-weight: 800; color: var(--accent);
+    margin-right: 0.5rem;
+  }
   .rule { height: 3px; background: var(--accent); margin: 1.5rem 0 2.25rem; }
 </style>

@@ -3,6 +3,7 @@ import { Image } from 'astro:assets';
 import Base from '~/layouts/Base.astro';
 import EntryList from '~/components/EntryList.astro';
 import WeeksGrid from '~/components/WeeksGrid.astro';
+import ProjectPlate from '~/components/ProjectPlate.astro';
 import { t, url, langPaths, isoWeek, type Lang } from '~/i18n';
 import { getPosts, getProjects, getPhotos, getBooks, getWeeks, weekText } from '~/lib/content';
 
@@ -11,8 +12,8 @@ const lang = Astro.params.lang as Lang;
 
 const posts = (await getPosts(lang)).slice(0, 4);
 const allProjects = await getProjects(lang);
-const projects = (allProjects.some((p) => p.data.featured) ? allProjects.filter((p) => p.data.featured) : allProjects).slice(0, 3);
-const photos = (await getPhotos()).slice(0, 3);
+const projects = (allProjects.some((p) => p.data.featured) ? allProjects.filter((p) => p.data.featured) : allProjects).slice(0, 4);
+const photos = (await getPhotos()).slice(0, 2);
 const reading = (await getBooks()).filter((b) => b.data.status === 'current').slice(0, 3);
 const latest = (await getWeeks())[0];
 
@@ -22,91 +23,132 @@ const { week, year } = isoWeek(latest?.data.date ?? new Date());
 ---
 
 <Base lang={lang}>
-  <section class="row hero" aria-labelledby="this-week">
-    <div class="margin">
-      <span class="margin-title">{t(lang, 'home.week')} {week}</span>
-      <span class="num">{year}</span>
-      <div class="grid-wrap"><WeeksGrid lang={lang} /></div>
+  <!--
+    The homepage is an open book. The left page (verso) is the mind:
+    this week, the blog, what's in rotation. The right page (recto) is the
+    hand: things made. A stitched binding runs between them.
+  -->
+  <div class="spread">
+    <div class="page verso">
+      <section class="row hero" aria-labelledby="this-week">
+        <div class="margin">
+          <span class="margin-title">{t(lang, 'home.week')} {week}</span>
+          <span class="num">{year}</span>
+          <div class="grid-wrap"><WeeksGrid lang={lang} /></div>
+        </div>
+        <div class="column">
+          <h1 id="this-week" class="this-week">
+            <span class="visually-hidden">{t(lang, 'home.week')} {week}. </span>
+            {latest ? weekText(latest, lang) : t(lang, 'home.intro')}
+          </h1>
+          {latest && <p class="intro">{t(lang, 'home.intro')} <a href={url(lang, 'weeks')}>{t(lang, 'home.earlier')}</a>.</p>}
+        </div>
+      </section>
+
+      {posts.length > 0 && (
+        <section class="section" aria-labelledby="h-writing">
+          <EntryList
+            lang={lang}
+            heading={{ id: 'h-writing', label: t(lang, 'home.latest'), href: url(lang, 'blog') }}
+            collection="posts"
+            showSummary
+            items={posts.map((p) => ({ id: p.id, href: url(lang, 'blog', p.id), title: p.data.title, date: p.data.date, summary: p.data.summary }))}
+          />
+        </section>
+      )}
+
+      {reading.length > 0 && (
+        <section class="row section" aria-labelledby="h-reading">
+          <div class="margin"><a id="h-reading" class="margin-title" href={url(lang, 'rotation')}>{t(lang, 'home.reading')}</a></div>
+          <ul class="column reading">
+            {reading.map((b) => <li><cite>{b.data.title}</cite> <span class="muted">{lang === 'da' ? 'af' : 'by'} {b.data.creator}</span></li>)}
+          </ul>
+        </section>
+      )}
     </div>
-    <div class="column">
-      <h1 id="this-week" class="this-week">
-        <span class="visually-hidden">{t(lang, 'home.week')} {week}. </span>
-        {latest ? weekText(latest, lang) : t(lang, 'home.intro')}
-      </h1>
-      {latest && <p class="intro">{t(lang, 'home.intro')} <a href={url(lang, 'weeks')}>{t(lang, 'home.earlier')}</a>.</p>}
+
+    <div class="binding" aria-hidden="true"></div>
+
+    <div class="page recto">
+      {projects.length > 0 && (
+        <section aria-labelledby="h-projects" class="plates">
+          <a id="h-projects" class="margin-title recto-head" href={url(lang, 'projects')}>{t(lang, 'home.projects')}</a>
+          {projects.map((p) => (
+            <ProjectPlate id={p.id} href={url(lang, 'projects', p.id)} title={p.data.title} year={p.data.year} summary={p.data.summary} link={p.data.link} />
+          ))}
+        </section>
+      )}
+
+      {photos.length > 0 && (
+        <section aria-labelledby="h-photos" class="photos">
+          <a id="h-photos" class="margin-title recto-head" href={url(lang, 'photos')}>{t(lang, 'home.photos')}</a>
+          <div class="strip">
+            {photos.map((p) => (
+              <a href={url(lang, 'photos') + '#' + p.id}>
+                <Image src={p.data.image} alt={(lang === 'da' ? p.data.captionDa : p.data.captionEn) ?? p.data.title} widths={[360, 720]} sizes="(max-width: 68rem) 50vw, 15rem" />
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
-  </section>
-
-  {posts.length > 0 && (
-    <section class="section" aria-labelledby="h-writing">
-      <EntryList
-        lang={lang}
-        heading={{ id: 'h-writing', label: t(lang, 'home.latest'), href: url(lang, 'blog') }}
-        collection="posts"
-        showSummary
-        items={posts.map((p) => ({ id: p.id, href: url(lang, 'blog', p.id), title: p.data.title, date: p.data.date, summary: p.data.summary }))}
-      />
-    </section>
-  )}
-
-  {projects.length > 0 && (
-    <section class="section" aria-labelledby="h-projects">
-      <EntryList
-        lang={lang}
-        heading={{ id: 'h-projects', label: t(lang, 'home.projects'), href: url(lang, 'projects') }}
-        collection="projects"
-        showSummary
-        items={projects.map((p) => ({ id: p.id, href: url(lang, 'projects', p.id), title: p.data.title, year: p.data.year, summary: p.data.summary }))}
-      />
-    </section>
-  )}
-
-  {reading.length > 0 && (
-    <section class="row section" aria-labelledby="h-reading">
-      <div class="margin"><a id="h-reading" class="margin-title" href={url(lang, 'rotation')}>{t(lang, 'home.reading')}</a></div>
-      <ul class="column reading">
-        {reading.map((b) => <li><cite>{b.data.title}</cite> <span class="muted">{lang === 'da' ? 'af' : 'by'} {b.data.creator}</span></li>)}
-      </ul>
-    </section>
-  )}
-
-  {photos.length > 0 && (
-    <section class="row section" aria-labelledby="h-photos">
-      <div class="margin"><a id="h-photos" class="margin-title" href={url(lang, 'photos')}>{t(lang, 'home.photos')}</a></div>
-      <div class="column strip">
-        {photos.map((p) => (
-          <a href={url(lang, 'photos') + '#' + p.id}>
-            <Image src={p.data.image} alt={(lang === 'da' ? p.data.captionDa : p.data.captionEn) ?? p.data.title} widths={[360, 720]} sizes="(max-width: 52rem) 100vw, 14rem" />
-          </a>
-        ))}
-      </div>
-    </section>
-  )}
+  </div>
 </Base>
 
 <style>
-  .hero { padding-top: clamp(0.5rem, 3vw, 2rem); }
-  .hero { padding-block: clamp(1.5rem, 5vw, 4rem) 0; }
-  .hero > .margin { padding-top: 0.75rem; }
+  .spread {
+    display: grid; grid-template-columns: minmax(0, 1.3fr) 4rem minmax(0, 1fr);
+    padding-block: clamp(1.5rem, 4vw, 3.5rem) 0;
+  }
+  /* The verso keeps the margin/column grid, scaled to its page. */
+  .verso { --margin: 10.25rem; --column: 100%; --dot: 0.5rem; --dot-gap: 0.28rem; min-width: 0; }
+  .recto { min-width: 0; display: grid; gap: var(--block); align-content: start; }
+
+  /* The binding: a soft fold with a sewn thread down the middle. */
+  .binding { position: relative; }
+  .binding::before {
+    content: ''; position: absolute; top: -1rem; bottom: 0; left: 50%; width: 2.5rem; transform: translateX(-50%);
+    background: linear-gradient(to right, transparent, var(--fold) 45%, var(--fold-deep) 50%, var(--fold) 55%, transparent);
+  }
+  .binding::after {
+    content: ''; position: absolute; top: 0.5rem; bottom: 1rem; left: 50%; width: 1px;
+    background: repeating-linear-gradient(to bottom, var(--thread) 0 9px, transparent 9px 20px);
+  }
+
+  .hero > .margin { padding-top: 0.6rem; }
   .grid-wrap { margin-top: 1.25rem; }
   .this-week {
-    font-size: clamp(2rem, 1.25rem + 2.5vw, 3.2rem); font-weight: 800; line-height: 1.06;
+    font-size: clamp(1.75rem, 1rem + 1.6vw, 2.45rem); font-weight: 800; line-height: 1.08;
     max-width: 20ch;
   }
+  .intro { margin-top: 1.75rem; color: var(--muted); max-width: 36rem; font-size: 1.125rem; }
+  .intro a { color: var(--ink); }
+  .reading { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+  cite { font-style: italic; }
+
+  .recto-head { display: block; margin-bottom: 0.25rem; }
+  .plates { display: grid; gap: 1.25rem; }
+  .strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; margin-top: 0.75rem; }
+  .strip img { aspect-ratio: 4 / 5; object-fit: cover; width: 100%; background: var(--paper-deep); }
+  .strip a:hover img { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* Below a two-page width the book closes to one page: the binding
+     becomes a stitched seam between mind and hand. */
+  @media (max-width: 68rem) {
+    .spread { grid-template-columns: minmax(0, 1fr); }
+    .verso { --margin: 13.5rem; --column: 42rem; --dot: 0.6875rem; --dot-gap: 0.3125rem; }
+    .binding { height: 4rem; margin-block: var(--block) 0; }
+    .binding::before { top: 50%; bottom: auto; left: 0; right: 0; width: auto; height: 2rem; transform: translateY(-50%);
+      background: linear-gradient(to bottom, transparent, var(--fold) 45%, var(--fold-deep) 50%, var(--fold) 55%, transparent); }
+    .binding::after { top: 50%; bottom: auto; left: 0; right: 0; width: auto; height: 1px;
+      background: repeating-linear-gradient(to right, var(--thread) 0 9px, transparent 9px 20px); }
+    .recto { max-width: 42rem; margin-top: 2rem; }
+  }
   @media (max-width: 52rem) {
+    .verso { --margin: 0rem; }
     .hero > .margin { grid-auto-flow: row !important; margin-bottom: 1.5rem; }
     .hero > .margin > .num { display: none; }
     .grid-wrap { margin-top: 0.6rem; }
   }
-  .intro { margin-top: 1.75rem; color: var(--muted); max-width: 36rem; font-size: 1.125rem; }
-  .intro a { color: var(--ink); }
-
-
-  .reading { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
-  cite { font-style: italic; }
-
-  .strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
-  .strip img { aspect-ratio: 4 / 5; object-fit: cover; width: 100%; background: var(--paper-deep); }
-  .strip a:hover img { outline: 3px solid var(--accent); outline-offset: -3px; }
-  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
