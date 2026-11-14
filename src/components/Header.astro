@@ -32,14 +32,14 @@ const items: [string, IconName, Parameters<typeof t>[1]][] = [
     <div class="fold" id="site-menu">
       <nav aria-label={lang === 'da' ? 'Hovedmenu' : 'Main'}>
         <ul>
-          {items.map(([slug, icon, key]) => (
-            <li>
+          {items.map(([slug, icon, key], i) => (
+            <li style={`--i:${i}`}>
               <a class="nav-key" href={url(lang, slug)} aria-current={current === slug ? 'page' : undefined}>
                 <Icon name={icon} /><span>{t(lang, key)}</span><span class="led" aria-hidden="true"></span>
               </a>
             </li>
           ))}
-          <li class="lang-li">
+          <li class="lang-li" style={`--i:${items.length}`}>
             <a class="lang" href={alternate} hreflang={other(lang)} lang={other(lang)} data-astro-reload data-lang-switch={other(lang)}>
               {t(lang, 'lang.switch')}
             </a>
@@ -55,6 +55,7 @@ const items: [string, IconName, Parameters<typeof t>[1]][] = [
     const head = document.querySelector<HTMLElement>('[data-head]');
     const key = document.querySelector<HTMLButtonElement>('[data-menu-key]');
     if (!head || !key) return;
+    if (open) head.style.setProperty('--bar-h', head.querySelector<HTMLElement>('.bar')!.offsetHeight + 'px');
     head.toggleAttribute('data-open', open);
     key.setAttribute('aria-expanded', String(open));
     key.querySelector('[data-menu-label]')!.textContent = open ? key.dataset.openLabel! : key.dataset.closedLabel!;
@@ -106,26 +107,39 @@ const items: [string, IconName, Parameters<typeof t>[1]][] = [
 
   @media (max-width: 72rem) {
     .head-in { display: block; min-height: 0; }
+    /* The bar keeps its place in the page while it is lifted out above the sheet, so nothing under it moves. */
+    .head[data-open] .head-in { min-height: var(--bar-h, 0px); }
     .bar { padding-block: 16px; position: relative; z-index: 2; }
-    .menu-key { display: inline-flex; }
+    .menu-key { display: inline-flex; justify-content: center; min-width: 6.5em; }
     .head[data-open] .bar {
       position: fixed; top: 0; left: 0; right: 0;
-      padding: calc(16px + env(safe-area-inset-top, 0px)) var(--gutter-r) 16px var(--gutter-l);
+      padding: 16px var(--gutter-r) 16px var(--gutter-l);
     }
-    /* The menu is a full-page sheet in the page colour that unrolls from the top. */
+    /* The menu is a full-page sheet in the page colour. It fades in while the keys
+       drop into place one after another; closing runs the same way, quicker. */
     .fold {
-      position: fixed; inset: 0; z-index: 1; overflow-y: auto; background: var(--body);
+      position: fixed; inset: 0; z-index: 1; overflow-y: auto; overscroll-behavior: contain; background: var(--body);
       padding: calc(92px + env(safe-area-inset-top, 0px)) var(--gutter-r) calc(32px + env(safe-area-inset-bottom, 0px)) var(--gutter-l);
-      clip-path: inset(0 0 100% 0); visibility: hidden;
-      transition: clip-path 0.36s var(--ease), visibility 0s 0.36s;
+      opacity: 0; visibility: hidden;
+      transition: opacity 0.26s ease 0.06s, visibility 0s linear 0.32s;
     }
-    .head[data-open] .fold { clip-path: inset(0); visibility: visible; transition: clip-path 0.36s var(--ease); }
+    .head[data-open] .fold { opacity: 1; visibility: visible; transition: opacity 0.3s ease; }
+    .fold li {
+      opacity: 0; transform: translateY(-10px);
+      transition: opacity 0.18s ease, transform 0.22s ease;
+    }
+    .head[data-open] .fold li {
+      opacity: 1; transform: none;
+      transition: opacity 0.34s ease calc(0.05s + var(--i) * 0.035s), transform 0.5s var(--ease) calc(0.05s + var(--i) * 0.035s);
+    }
     ul { flex-direction: column; align-items: stretch; gap: 14px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
     .nav-key { display: flex; width: 100%; gap: 12px; padding: 13px 18px; font-size: 1rem; }
     .nav-key .pic { width: 20px; height: 20px; }
     .nav-key .led { margin-left: auto; }
     .lang-li { text-align: center; padding-top: 10px; }
     .lang { font-size: 0.9rem; }
-    @media (prefers-reduced-motion: reduce) { .fold, .head[data-open] .fold { transition: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .fold, .head[data-open] .fold, .fold li, .head[data-open] .fold li { transition: none; transform: none; }
+    }
   }
 </style>
