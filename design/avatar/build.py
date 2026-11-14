@@ -34,8 +34,8 @@ PROFILE = [(0, 0.0), (1, 0.12), (3, 0.34), (6, 0.47), (9, 0.55), (12, 0.62), (15
            (124.2, 0.57), (125, 0.44)]
 GROOVES = [92.5, 101.8, 110.8]
 
-FACE = dict(eye_x=0.33, eye_s=0.283, eye_w=0.175, eye_h=0.29,
-            smile_w=0.15, smile_end=0.335, smile_bot=0.375, smile_r=0.033,
+FACE = dict(eye_x=0.36, eye_s=0.283, eye_w=0.175, eye_h=0.29,
+            smile_w=0.15, smile_end=0.335, smile_bot=0.375, smile_r=0.027,
             led_x=0.0, led_s=0.563, led_r=0.085,
             key_x=0.42, key_s=0.563, key_w=0.46, key_h=0.2)
 ARM = dict(x=0.95, y=-0.12, s=0.725, rx=0.34, ry=0.35, rz=0.38)
@@ -61,14 +61,15 @@ def half_width(s):
     return r
 
 
-def lathe(name, rings, segs=128, sy=1.0):
+def lathe(name, rings, segs=128, sy=1.0, angles=None):
     """rings: (z, r) from top to bottom. Quads all round; the poles close with fans."""
     me = bpy.data.meshes.new(name)
     bm = bmesh.new()
     grid = []
+    angles = angles if angles is not None else [2 * math.pi * i / segs for i in range(segs)]
+    segs = len(angles)
     for z, r in rings:
-        grid.append([bm.verts.new((r * math.cos(2 * math.pi * i / segs), r * math.sin(2 * math.pi * i / segs) * sy, z))
-                     for i in range(segs)])
+        grid.append([bm.verts.new((r * math.cos(t), r * math.sin(t) * sy, z)) for t in angles])
     for j in range(len(grid) - 1):
         for i in range(segs):
             bm.faces.new((grid[j][i], grid[j + 1][i], grid[j + 1][(i + 1) % segs], grid[j][(i + 1) % segs]))
@@ -87,13 +88,53 @@ def lathe(name, rings, segs=128, sy=1.0):
 def make_body():
     rings = []
     # Dense rings round the grooves, looser elsewhere.
-    ss = sorted(set([0.15 * k for k in range(1, 30)] + list(np.arange(4.5, 125, 0.55))))
+    ss = sorted(set([0.15 * k for k in range(1, 30)] + list(np.arange(4.5, 22, 0.55)) + list(np.arange(22, 82, 0.28))
+                    + list(np.arange(82, 125, 0.55))))
     for s in ss:
         rings.append((ZT - s / PX, half_width(s)))
     rb = rings[-1][1]
     for t in (0.5, 0.75, 0.9):
         rings.append((Z0 - 0.002 * t, rb * (1 - t)))
-    return lathe('Body', rings, segs=160, sy=DEPTH)
+    # Fine angular steps across the face (front is -90 degrees), coarse round the back.
+    front = -math.pi / 2
+    angles = list(np.arange(front - 1.0, front + 1.0, 0.0055))
+    angles += list(np.arange(front + 1.0, front + 2 * math.pi - 1.0, 0.035))
+    return lathe('Body', rings, sy=DEPTH, angles=angles)
+
+
+def smoothstep(e0, e1, x):
+    t = np.clip((x - e0) / (e1 - e0), 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def carve(body, feats):
+    """Press sockets into the body: each feature is a 2D shape on the front (x, z) with a depth;
+    the floor is flat and the lip is a soft S-curve, like a moulded part."""
+    me = body.data
+    n = len(me.vertices)
+    co = np.empty(n * 3); me.vertices.foreach_get('co', co); co = co.reshape(n, 3)
+    nor = np.empty(n * 3); me.vertices.foreach_get('normal', nor); nor = nor.reshape(n, 3)
+    x, z = co[:, 0], co[:, 2]
+    disp = np.zeros(n)
+    front = co[:, 1] < -0.2
+    for f in feats:
+        if f['kind'] == 'ellipse':
+            k = np.sqrt(((x - f['cx']) / f['a']) ** 2 + ((z - f['cz']) / f['b']) ** 2)
+            sdf = (k - 1) * min(f['a'], f['b'])
+        elif f['kind'] == 'circle':
+            sdf = np.hypot(x - f['cx'], z - f['cz']) - f['r']
+        else:  # 'poly': a stroke along points, round-ended
+            P = np.array(f['pts']); d = np.full(n, 1e9)
+            for p0, p1 in zip(P[:-1], P[1:]):
+                v = p1 - p0; L2 = v @ v
+                t = np.clip(((x - p0[0]) * v[0] + (z - p0[1]) * v[1]) / L2, 0, 1)
+                d = np.minimum(d, np.hypot(x - p0[0] - t * v[0], z - p0[1] - t * v[1]))
+            sdf = d - f['r']
+        rho = f.get('rho', 0.018)
+        dd = -f['depth'] * (1 - smoothstep(-rho, rho, sdf))
+        disp = np.where(front, np.minimum(disp, dd), disp)
+    co += nor * disp[:, None]
+    me.vertices.foreach_set('co', co.ravel()); me.update()
 
 
 def make_leg(side):
@@ -170,17 +211,17 @@ def materials():
         p.inputs['Roughness'].default_value = rough
         for k, v in kw.items(): p.inputs[k].default_value = v
         return m, p
-    plastic, p = mat('Plastic', (0.585, 0.54, 0.515), 0.55, **{'Subsurface Weight': 0.1, 'Subsurface Scale': 0.05,
+    plastic, p = mat('Plastic', (0.585, 0.54, 0.515), 0.62, **{'Subsurface Weight': 0.1, 'Subsurface Scale': 0.05,
                                                               'Specular IOR Level': 0.35})
     nt = plastic.node_tree   # soft-touch: a faint noise bump
     tex = nt.nodes.new('ShaderNodeTexNoise'); tex.inputs['Scale'].default_value = 160; tex.inputs['Detail'].default_value = 4
     bump = nt.nodes.new('ShaderNodeBump'); bump.inputs['Strength'].default_value = 0.03; bump.inputs['Distance'].default_value = 0.002
     nt.links.new(tex.outputs['Fac'], bump.inputs['Height']); nt.links.new(bump.outputs['Normal'], p.inputs['Normal'])
-    gloss, _ = mat('Gloss', (0.003, 0.003, 0.004), 0.5, **{'Coat Weight': 0.35, 'Coat Roughness': 0.22, 'Specular IOR Level': 0.0})
+    gloss, _ = mat('Gloss', (0.012, 0.012, 0.014), 0.32, **{'Coat Weight': 0.6, 'Coat Roughness': 0.14, 'Specular IOR Level': 0.4})
     ink, _ = mat('Ink', (0.006, 0.006, 0.007), 0.5)
-    led, _ = mat('LED', (0.2, 0.9, 0.05), 0.15, **{'Emission Color': (0.3, 1.0, 0.0, 1), 'Emission Strength': 4.0})
+    led, _ = mat('LED', (0.25, 0.95, 0.0), 0.15, **{'Emission Color': (0.4, 1.0, 0.0, 1), 'Emission Strength': 2.6})
     ledoff, _ = mat('LEDOff', (0.32, 0.33, 0.31), 0.3)
-    keycap, _ = mat('Keycap', (0.86, 0.83, 0.79), 0.4, **{'Coat Weight': 0.25})
+    keycap, _ = mat('Keycap', (0.66, 0.63, 0.6), 0.42, **{'Coat Weight': 0.15})
     slot, _ = mat('Slot', (0.30, 0.28, 0.26), 0.6)
     shine, _ = mat('Shine', (1, 1, 1), 0.3, **{'Emission Color': (1, 1, 1, 1), 'Emission Strength': 0.6})
     pocket, _ = mat('Pocket', (0.36, 0.34, 0.32), 0.6)
@@ -207,55 +248,76 @@ def build(pose='front'):
     for o in [*legs.values(), *arms.values()]: o.data.materials.append(M['plastic'])
     bpy.context.view_layer.update()
 
-    F = FACE; face = P.get('face', 'smile'); parts = []
+    F = FACE; face = P.get('face', 'smile'); parts = []; feats = []
+    zf = lambda s_: ZT - s_ * BODY_H
+
+    def sphere(name, rx, ry, rz, mat, segs=64):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=segs, ring_count=40, radius=1)
+        ob = bpy.context.object; ob.name = name; ob.scale = (rx, ry, rz)
+        bpy.ops.object.transform_apply(scale=True)
+        for p in ob.data.polygons: p.use_smooth = True
+        ob.data.materials.append(mat); parts.append(ob)
+        return ob
+
+    def bar(name, pts, r, lift, mat):
+        """A graphite bar along a curve on the surface, with round ends, sitting in its groove."""
+        cu = bpy.data.curves.new(name, 'CURVE'); cu.dimensions = '3D'
+        sp = cu.splines.new('POLY'); sp.points.add(len(pts) - 1)
+        ends = []
+        for i, (x, s_) in enumerate(pts):
+            loc, nor = surface(body, x, s_); q = loc + nor * lift
+            sp.points[i].co = (q.x, q.y, q.z, 1)
+            if i in (0, len(pts) - 1): ends.append(q)
+        cu.bevel_depth = r; cu.bevel_resolution = 8; cu.use_fill_caps = False
+        ob = bpy.data.objects.new(name, cu); bpy.context.collection.objects.link(ob)
+        ob.data.materials.append(mat); parts.append(ob)
+        for q in ends:
+            e = sphere(name + 'End', r, r, r, mat, segs=32); e.location = q
+        feats.append(dict(kind='poly', pts=[(x, zf(s_)) for x, s_ in pts], r=r + 0.02, depth=0.032))
+
+    eye_s = F['eye_s'] - (0.02 if face == 'o' else 0)
     if face == 'closed':
         for sx in (-1, 1):
             T = 1.1
             pts = [(sx * F['eye_x'] + 0.085 * math.sin(t) / math.sin(T),
-                    F['eye_s'] + 0.02 + 0.045 * (math.cos(t) - math.cos(T)) / (1 - math.cos(T))) for t in np.linspace(-T, T, 28)]
-            parts.append(curve_on(body, 'Lid', pts, 0.02, M['ink']))
+                    eye_s + 0.02 + 0.045 * (math.cos(t) - math.cos(T)) / (1 - math.cos(T))) for t in np.linspace(-T, T, 28)]
+            bar('Lid', pts, 0.021, -0.02, M['gloss'])
     else:
         big = 1.12 if face == 'o' else 1.0
+        ew, eh = F['eye_w'] * big, F['eye_h'] * big
         for sx in (-1, 1):
-            e = capsule('Eye', F['eye_w'] * big, F['eye_h'] * big, 0.07); e.data.materials.append(M['gloss'])
-            orient(e, *surface(body, sx * F['eye_x'], F['eye_s'] - (0.02 if face == 'o' else 0)), lift=-0.014)
-            parts.append(e)
-            pk = capsule('EyePocket', F['eye_w'] * big + 0.022, F['eye_h'] * big + 0.022, 0.05); pk.data.materials.append(M['pocket'])
-            orient(pk, *surface(body, sx * F['eye_x'], F['eye_s'] - (0.02 if face == 'o' else 0)), lift=-0.016)
-            parts.append(pk)
-            hl = capsule('EyeLight', 0.035 * big, 0.055 * big, 0.02); hl.data.materials.append(M['shine'])
-            orient(hl, *surface(body, sx * F['eye_x'] - 0.022, F['eye_s'] - 0.04 - (0.02 if face == 'o' else 0)), lift=0.019)
-            parts.append(hl)
+            # A pocket a little larger than the eye; the eye is a shallow convex lens inside it.
+            feats.append(dict(kind='ellipse', cx=sx * F['eye_x'], cz=zf(eye_s), a=ew / 2 + 0.022, b=eh / 2 + 0.022, depth=0.05))
+            e = sphere('Eye', ew / 2, eh / 2, 0.045, M['gloss'])
+            orient(e, *surface(body, sx * F['eye_x'], eye_s), lift=-0.052)
     if face == 'smile':
         T = 1.2
         pts = [(F['smile_w'] * math.sin(t) / math.sin(T),
                 F['smile_bot'] - (F['smile_bot'] - F['smile_end']) * (1 - math.cos(t)) / (1 - math.cos(T))) for t in np.linspace(-T, T, 44)]
-        parts.append(curve_on(body, 'Smile', pts, F['smile_r'], M['ink']))
+        bar('Smile', pts, F['smile_r'], -0.03, M['gloss'])
     elif face == 'o':
-        m = capsule('Mouth', 0.07, 0.09, 0.05); m.data.materials.append(M['gloss'])
-        orient(m, *surface(body, 0, 0.365), lift=-0.01); parts.append(m)
+        feats.append(dict(kind='circle', cx=0, cz=zf(0.365), r=0.055, depth=0.04))
+        m = sphere('Mouth', 0.035, 0.045, 0.03, M['gloss']); orient(m, *surface(body, 0, 0.365), lift=-0.035)
 
     led_on = P.get('led', True)
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=32, radius=F['led_r'])
-    led = bpy.context.object; led.name = 'LED'
-    for p in led.data.polygons: p.use_smooth = True
-    led.data.materials.append(M['led' if led_on else 'ledoff'])
     loc, nor = surface(body, F['led_x'], F['led_s'])
-    orient(led, loc, nor, lift=-0.022); parts.append(led)
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=F['led_r'] * 1.3)
-    ring = bpy.context.object; ring.name = 'LEDRing'; ring.data.materials.append(M['slot'])
-    for p in ring.data.polygons: p.use_smooth = True
-    orient(ring, loc, nor, lift=-0.026); ring.scale = (1, 1, 0.35); parts.append(ring)
+    feats.append(dict(kind='circle', cx=F['led_x'], cz=zf(F['led_s']), r=F['led_r'] + 0.022, depth=0.035))
+    led = sphere('LED', F['led_r'], F['led_r'], F['led_r'] * 0.8, M['led' if led_on else 'ledoff'], segs=48)
+    orient(led, loc, nor, lift=-0.04)
     if led_on:
         bpy.ops.object.light_add(type='POINT', radius=0.03)
         gl = bpy.context.object; gl.data.energy = 1.2; gl.data.color = (0.4, 1.0, 0.2)
         gl.location = loc + nor * 0.12; parts.append(gl)
 
+    # The key: a satin pill standing in a recessed slot.
     loc, nor = surface(body, F['key_x'], F['key_s'])
-    key = capsule('Key', F['key_h'], F['key_w'], 0.13, segs=64); key.data.materials.append(M['keycap'])
-    orient(key, loc, nor, lift=0.025, spin=math.pi / 2); parts.append(key)
-    slot = capsule('Slot', F['key_h'] + 0.04, F['key_w'] + 0.045, 0.06, segs=64); slot.data.materials.append(M['slot'])
-    orient(slot, loc, nor, lift=-0.012, spin=math.pi / 2); parts.append(slot)
+    half = (F['key_w'] - F['key_h']) / 2
+    feats.append(dict(kind='poly', pts=[(F['key_x'] - half, zf(F['key_s'])), (F['key_x'] + half, zf(F['key_s']))],
+                      r=F['key_h'] / 2 + 0.02, depth=0.035))
+    key = capsule('Key', F['key_h'], F['key_w'], 0.12, segs=64); key.data.materials.append(M['keycap'])
+    orient(key, loc, nor, lift=-0.005, spin=math.pi / 2); parts.append(key)
+
+    carve(body, feats)
 
     # Rig: bind every part rigidly to a bone.
     arm_data = bpy.data.armatures.new('Rig'); rig = bpy.data.objects.new('Rig', arm_data)
@@ -296,7 +358,7 @@ def uv_unwrap():
         bpy.ops.object.mode_set(mode='OBJECT'); ob.select_set(False)
 
 
-def stage(yaw, elev=8.0, size=700, samples=48, dark=True, lens=100, dist=13.0):
+def stage(yaw, elev=8.0, size=700, samples=48, dark=True, lens=100, dist=13.0, target=None):
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'
     sc.cycles.samples = samples; sc.cycles.use_denoising = True
@@ -325,7 +387,7 @@ def stage(yaw, elev=8.0, size=700, samples=48, dark=True, lens=100, dist=13.0):
 
     cam = bpy.data.objects.new('Cam', bpy.data.cameras.new('C')); cam.data.lens = lens
     sc.collection.objects.link(cam); sc.camera = cam
-    e = math.radians(elev); target = Vector((0, 0, (ZT) * 0.5 + 0.05))
+    e = math.radians(elev); target = Vector((0, 0, target if target is not None else ZT * 0.5 + 0.05))
     cam.location = target + Vector((0, -dist * math.cos(e), dist * math.sin(e)))
     cam.rotation_euler = (target - cam.location).to_track_quat('-Z', 'Y').to_euler()
     rig = bpy.data.objects['Rig']; rig.rotation_euler = (0, 0, math.radians(yaw))
@@ -338,7 +400,7 @@ if __name__ == '__main__':
     ap.add_argument('--elev', type=float, default=3); ap.add_argument('--lens', type=float, default=100)
     ap.add_argument('--dist', type=float, default=13); ap.add_argument('--size', type=int, default=700)
     ap.add_argument('--samples', type=int, default=48); ap.add_argument('--light', action='store_true')
-    ap.add_argument('--out'); ap.add_argument('--export'); ap.add_argument('--expo', type=float, default=EXPO)
+    ap.add_argument('--target', type=float); ap.add_argument('--out'); ap.add_argument('--export'); ap.add_argument('--expo', type=float, default=EXPO)
     a = ap.parse_args(argv)
     EXPO = a.expo
     build(a.pose)
@@ -347,6 +409,6 @@ if __name__ == '__main__':
         bpy.ops.wm.save_as_mainfile(filepath=a.export.replace('.glb', '.blend'))
         bpy.ops.export_scene.gltf(filepath=a.export, export_format='GLB', export_apply=True, export_lights=False)
     if a.out:
-        stage(a.view, a.elev, a.size, a.samples, dark=not a.light, lens=a.lens, dist=a.dist)
+        stage(a.view, a.elev, a.size, a.samples, dark=not a.light, lens=a.lens, dist=a.dist, target=a.target)
         bpy.context.scene.render.filepath = a.out
         bpy.ops.render.render(write_still=True)
