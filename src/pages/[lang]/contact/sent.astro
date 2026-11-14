@@ -8,6 +8,6 @@ const lang = Astro.params.lang as Lang;
 ---
 
 <Base lang={lang} title={t(lang, 'contact.sentTitle')}>
-  <PageHead title={t(lang, 'contact.sentTitle')} intro={t(lang, 'contact.sentBody')} pose="cheer" poseLabel={lang === 'da' ? 'Min robotfigur jubler' : 'My robot character, cheering'} />
+  <PageHead title={t(lang, 'contact.sentTitle')} intro={t(lang, 'contact.sentBody')} pose="idea" poseLabel={lang === 'da' ? 'Min robotfigur med en pære, der lyser' : 'My robot character with a lit light bulb'} />
   <div class="row"><div class="margin"></div><p class="column"><a href={url(lang)}>{t(lang, 'contact.back')}</a></p></div>
 </Base>

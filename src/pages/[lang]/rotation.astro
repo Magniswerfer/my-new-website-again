@@ -17,8 +17,8 @@ const groups = [
 ---
 
 <Base lang={lang} title={t(lang, 'books.title')} current="rotation">
-  <PageHead icon="rotation" title={t(lang, 'books.title')} intro={t(lang, 'books.intro')} pose="read" poseLabel={lang === 'da' ? 'Min robotfigur sidder og læser en bog' : 'My robot character sitting with a book'} />
-  {books.length === 0 && <Empty text={t(lang, 'empty.books')} />}
+  <PageHead icon="rotation" title={t(lang, 'books.title')} intro={t(lang, 'books.intro')} pose="headphones" poseLabel={lang === 'da' ? 'Min robotfigur lytter med høretelefoner' : 'My robot character listening on headphones'} />
+  {books.length === 0 && <Empty pose="books" text={t(lang, 'empty.books')} />}
   <div class="groups">
     {groups.map(([status, key]) => {
       const items = books.filter((b) => b.data.status === status);

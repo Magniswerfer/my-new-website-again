@@ -6,7 +6,7 @@
  */
 import ReadingLine from './ReadingLine.astro';
 import Icon, { type IconName } from './Icon.astro';
-import Avatar2D from './Avatar2D.astro';
+import Avatar from './Avatar.astro';
 
 interface Props {
   margin: string[];
@@ -28,7 +28,7 @@ const { margin, title, icon, readingLine = false } = Astro.props;
   <div class="margin">{readingLine && <ReadingLine />}</div>
   <div class="column">
     <div class="prose"><slot /></div>
-    {readingLine && <p class="end" aria-hidden="true"><Avatar2D size={24} asleep /></p>}
+    {readingLine && <div class="end"><Avatar pose="lie-read" label="" sizes="96px" /></div>}
     <slot name="after" />
   </div>
 </article>
@@ -43,6 +43,6 @@ const { margin, title, icon, readingLine = false } = Astro.props;
   .article { display: block; position: relative; }
   .article > .margin { position: absolute; top: 0; bottom: 0; left: calc(-1 * var(--gutter-l) + 8px); width: 12px; padding: 0; display: block; margin: 0; }
   .article > .column { max-width: 40rem; }
-  /* The end mark: the character, eyes closed, signing off. */
-  .end { margin: 2.4rem 0 0; line-height: 0; }
+  /* The end mark: the character lying down with a book. */
+  .end { margin: 2rem 0 0 -12px; width: 96px; }
 </style>

@@ -1,5 +1,5 @@
-"""Slice the pose sheet (design/avatar/poses-sheet.png, 4 x 3 poses on transparency)
-into one shared frame per pose, and split the ink marks (ticks, z's, the thought
+"""Slice the pose sheets (poses on transparency, made in ChatGPT) into one shared
+frame per pose, and split the ink marks (ticks, z's, the thought
 bubble) into their own layer so the site can recolour them in dark mode.
 
   python3 design/avatar/cutout.py
@@ -11,14 +11,17 @@ from scipy import ndimage
 
 HERE = pathlib.Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'src/assets/avatar'
-NAMES = [['stand', 'wave', 'walk', 'read'],
-         ['game', 'solder', 'think', 'sleep'],
-         ['backpack', 'cheer', 'laptop', 'coffee']]
-SCALE = 2  # the sheet is small; upsample once so retina screens get enough pixels
-
-sheet = Image.open(HERE / 'poses-sheet.png').convert('RGBA')
-W, H = sheet.size
-cw, ch = W / 4, H / 3
+# Each sheet: file, grid of names (None = skip), upsampling factor.
+# Sheet 1 has the plain standing pose the homepage's idle/blink/wave/sleep loop needs.
+SHEETS = [
+    ('poses-sheet.png', [['stand', 'wave', None, None],
+                         [None, None, None, 'sleep'],
+                         [None, None, None, None]], 2),
+    ('poses-sheet-2.png', [['hello', 'walk', 'cheer', 'laptop', 'read', 'nap'],
+                           ['think', 'solder', 'game', 'backpack', 'coffee', 'binoculars'],
+                           ['magnify', 'screwdriver', 'books', 'headphones', 'idea', 'camera'],
+                           ['box', 'tablet', 'd20', 'terminal', 'lie-read', 'beanbag']], 3),
+]
 
 
 def split(cell):
@@ -29,11 +32,19 @@ def split(cell):
     main = 1 + int(np.argmax(sizes))
     body = ndimage.binary_dilation(lab == main, iterations=6)
     rgb = np.asarray(cell)[:, :, :3].astype(int)
+    # Drop bits of neighbouring poses that reach into this cell (they touch its edge).
+    edge = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0, main}
+    arr0 = np.asarray(cell).copy()
+    for i in edge:
+        arr0[ndimage.binary_dilation(lab == i, iterations=3), 3] = 0
+    cell = Image.fromarray(arr0); a = arr0[:, :, 3]
+    for i in edge: lab[lab == i] = 0
     marks = np.zeros(a.shape, bool)
     for i in range(1, n + 1):
         if i == main: continue
         m = lab == i
-        if (m & body).any(): continue          # touches the figure: a prop, keep it
+        if not m.any() or (m & body).any(): continue   # gone, or touches the figure (a prop)
+        if rgb[m].mean() > 110: continue         # not ink (a glow, a sparkle, a speech bubble)
         marks |= m
     marks = ndimage.binary_dilation(marks, iterations=2) & (a > 0) & ~(lab == main)
     arr = np.asarray(cell).copy()
@@ -87,14 +98,19 @@ def blink(fig):
 
 OUT.mkdir(parents=True, exist_ok=True)
 for f in OUT.glob('*.webp'): f.unlink()
-for r, row in enumerate(NAMES):
-    for c, name in enumerate(row):
-        cell = sheet.crop((round(c * cw), round(r * ch), round((c + 1) * cw), round((r + 1) * ch)))
-        cell = cell.resize((cell.width * SCALE, cell.height * SCALE), Image.LANCZOS)
-        cell = cell.filter(ImageFilter.UnsharpMask(radius=1.6, percent=40, threshold=2))
-        fig, marks = split(cell)
-        fig.save(OUT / f'{name}.webp', 'WEBP', quality=90, method=6)
-        if marks: marks.save(OUT / f'{name}-marks.webp', 'WEBP', quality=90, method=6)
-        if name == 'stand':
-            blink(fig).save(OUT / 'blink.webp', 'WEBP', quality=90, method=6)
-        print(name, fig.size, 'marks' if marks else '')
+for file, names, scale in SHEETS:
+    sheet = Image.open(HERE / file).convert('RGBA')
+    rows, cols = len(names), len(names[0])
+    cw, ch = sheet.width / cols, sheet.height / rows
+    for r, row in enumerate(names):
+        for c, name in enumerate(row):
+            if not name: continue
+            cell = sheet.crop((round(c * cw), round(r * ch), round((c + 1) * cw), round((r + 1) * ch)))
+            cell = cell.resize((cell.width * scale, cell.height * scale), Image.LANCZOS)
+            cell = cell.filter(ImageFilter.UnsharpMask(radius=1.6, percent=40, threshold=2))
+            fig, marks = split(cell)
+            fig.save(OUT / f'{name}.webp', 'WEBP', quality=90, method=4)
+            if marks: marks.save(OUT / f'{name}-marks.webp', 'WEBP', quality=90, method=4)
+            if name == 'stand':
+                blink(fig).save(OUT / 'blink.webp', 'WEBP', quality=90, method=4)
+            print(name, fig.size, 'marks' if marks else '')

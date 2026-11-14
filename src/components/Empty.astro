@@ -1,15 +1,15 @@
 ---
-/** Shown where a list has nothing in it yet: the character naps until something arrives. */
-import Avatar from './Avatar.astro';
-interface Props { text: string; plain?: boolean }
-const { text, plain = false } = Astro.props;
+/** Shown where a list has nothing in it yet: the character lounges until something arrives. */
+import Avatar, { type Pose } from './Avatar.astro';
+interface Props { text: string; plain?: boolean; pose?: Pose }
+const { text, plain = false, pose = 'beanbag' } = Astro.props;
 ---
 
 {plain ? <p class="empty">{text}</p> : (
   <div class="row">
     <div class="margin"></div>
     <div class="column nap">
-      <Avatar class="nap-avatar" pose="sleep" label="" sizes="110px" />
+      <Avatar class="nap-avatar" pose={pose} label="" sizes="120px" />
       <p class="empty">{text}</p>
     </div>
   </div>
@@ -18,5 +18,5 @@ const { text, plain = false } = Astro.props;
 <style>
   .empty { color: var(--soft); max-width: 40rem; }
   .nap { display: flex; align-items: center; gap: 20px; }
-  .nap :global(.nap-avatar) { flex: none; width: 110px; }
+  .nap :global(.nap-avatar) { flex: none; width: 120px; }
 </style>
