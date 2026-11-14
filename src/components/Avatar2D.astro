@@ -1,0 +1,61 @@
+---
+/**
+ * The character as a flat vector drawing (front view): for small sizes,
+ * the favicon, and as the stand-in while the 3D model loads.
+ */
+interface Props { size?: number; class?: string; asleep?: boolean; label?: string }
+const { size = 40, class: cls, asleep = false, label } = Astro.props;
+const id = 'av' + Math.random().toString(36).slice(2, 8);
+---
+
+<svg class:list={['avatar-2d', cls]} width={size} height={(size * 140) / 120} viewBox="0 0 120 140"
+  role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : 'true'}>
+  <defs>
+    <radialGradient id={`${id}-b`} cx="0.36" cy="0.26" r="0.85">
+      <stop offset="0" stop-color="#FBFAF7" />
+      <stop offset="0.6" stop-color="#EFEAE3" />
+      <stop offset="1" stop-color="#D8D0C6" />
+    </radialGradient>
+    <radialGradient id={`${id}-l`} cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#8CF04A" />
+      <stop offset="1" stop-color="#4CC81E" />
+    </radialGradient>
+  </defs>
+  <ellipse cx="60" cy="133" rx="36" ry="4" fill="#000" opacity="0.1" />
+  <!-- legs -->
+  <rect x="29" y="98" width="28" height="33" rx="13" fill={`url(#${id}-b)`} />
+  <rect x="63" y="98" width="28" height="33" rx="13" fill={`url(#${id}-b)`} />
+  <!-- arms: eggs, tops leaning in -->
+  <ellipse cx="13.5" cy="77" rx="10" ry="16.5" transform="rotate(14 13.5 77)" fill={`url(#${id}-b)`} />
+  <ellipse cx="106.5" cy="77" rx="10" ry="16.5" transform="rotate(-14 106.5 77)" fill={`url(#${id}-b)`} />
+  <!-- body -->
+  <path d="M60 6 C85 6 104 23 104 50 L104 86 C104 101 95 111.6 80 111.6 L40 111.6 C25 111.6 16 101 16 86 L16 50 C16 23 35 6 60 6 Z" fill={`url(#${id}-b)`} />
+  <!-- grooves -->
+  <g fill="none" stroke="#000" stroke-opacity="0.15" stroke-width="1.4" stroke-linecap="round">
+    <path d="M16.5 85 Q60 89 103.5 85" />
+    <path d="M17 92.6 Q60 96.6 103 92.6" />
+    <path d="M19 100 Q60 104 101 100" />
+  </g>
+  <!-- face -->
+  {asleep ? (
+    <g fill="none" stroke="#16171A" stroke-width="2.4" stroke-linecap="round">
+      <path d="M40.5 35 Q45.3 39.5 50.1 35" /><path d="M69.9 35 Q74.7 39.5 79.5 35" />
+    </g>
+  ) : (
+    <g fill="#16171A">
+      <rect x="41.9" y="29" width="6.8" height="12.8" rx="3.4" />
+      <rect x="71.3" y="29" width="6.8" height="12.8" rx="3.4" />
+      <rect x="43.3" y="30.6" width="2" height="3.6" rx="1" fill="#fff" opacity="0.55" />
+      <rect x="72.7" y="30.6" width="2" height="3.6" rx="1" fill="#fff" opacity="0.55" />
+    </g>
+  )}
+  {!asleep && <path d="M54.2 39.6 Q60 47 65.8 39.6" fill="none" stroke="#16171A" stroke-width="2.8" stroke-linecap="round" />}
+  <!-- LED and key -->
+  {asleep ? <circle cx="57.4" cy="62.7" r="3.3" fill="#A3A79F" /> : (
+    <>
+      <circle cx="57.4" cy="62.7" r="6.5" fill="#6BE52A" opacity="0.22" />
+      <circle cx="57.4" cy="62.7" r="3.5" fill={`url(#${id}-l)`} />
+    </>
+  )}
+  <rect x="67.2" y="58" width="21.6" height="9.5" rx="4.75" fill="#F7F5F1" stroke="#000" stroke-opacity="0.28" stroke-width="1" />
+</svg>
