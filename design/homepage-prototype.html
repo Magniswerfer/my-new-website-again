@@ -1,0 +1,319 @@
+<title>Thread Ribbon</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
+<style>
+/* Layout: a working homepage prototype.
+   Frog / Snow White hardware for the fixed parts: a grooved off-white header panel with a dark
+   diagonal control corner (Walkman II) that holds the menu; pill keys with a green LED.
+   Threads for the living parts: a long ribbon of fine dyed threads flows in from the top, runs
+   down the right side, and each section's threads peel off to become that section's dividing
+   line. The more a section holds, the thicker its line. */
+:root {
+  --body: #EDECE7;        /* snow white */
+  --groove: rgb(30 30 32 / 0.075);
+  --graphite: #2A2B2E;
+  --platinum: #C9C7C0;
+  --ink: #1D1D1F;
+  --soft: #5F5D58;
+  --engrave: #8B8880;
+  --led: #2FB352;
+  --blog: #2E4D8F; --weeks: #B4412F; --projects: #C9962A; --photos: #4F7B52; --rotation: #6E4A6E; --about: #6A5242;
+  --f: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --body: #1A1B1E; --groove: rgb(255 255 255 / 0.05); --graphite: #0E0F11; --platinum: #3A3B3F;
+    --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A;
+    --blog: #7E9BE0; --weeks: #E2735F; --projects: #E3B653; --photos: #84B585; --rotation: #B98BB9; --about: #C29F86;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --body: #1A1B1E; --groove: rgb(255 255 255 / 0.05); --graphite: #0E0F11; --platinum: #3A3B3F;
+  --ink: #ECEAE4; --soft: #A6A39C; --engrave: #77746E; --led: #45D06A;
+  --blog: #7E9BE0; --weeks: #E2735F; --projects: #E3B653; --photos: #84B585; --rotation: #B98BB9; --about: #C29F86;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--body); color: var(--ink); font-family: var(--f); font-size: 16.5px; line-height: 1.55; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--blog); outline-offset: 3px; border-radius: 4px; }
+.pad { padding-left: max(28px, env(safe-area-inset-left, 0px)); padding-right: max(28px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1180px; margin: 0 auto; }
+/* Snow White grooves: fine recessed horizontal lines cut into a surface. */
+.grooves { background-image: repeating-linear-gradient(180deg, transparent 0 5px, var(--groove) 5px 6px, transparent 6px 7px); }
+/* Small engraved labels, as printed on the hardware. */
+.engraved { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--engrave); font-stretch: 90%; }
+
+/* Pictograms: one family on a 24-unit grid, always in their section's colour. */
+.pic { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.pic .f { fill: currentColor; stroke: none; }
+.c-blog { color: var(--blog); } .c-weeks { color: var(--weeks); } .c-projects { color: var(--projects); }
+.c-photos { color: var(--photos); } .c-rotation { color: var(--rotation); } .c-about { color: var(--about); }
+
+/* ---------- Header: grooved panel with a dark diagonal control corner ---------- */
+.head { position: relative; border-bottom: 1px solid var(--groove); }
+.head-in { display: flex; align-items: stretch; justify-content: space-between; min-height: 76px; }
+.name { align-self: center; font-weight: 700; font-size: 19px; text-decoration: none; letter-spacing: -0.005em; padding-right: 24px; }
+.corner {
+  position: relative; display: flex; align-items: center; gap: 22px;
+  padding: 0 max(28px, env(safe-area-inset-right, 0px)) 0 84px;
+  margin-right: calc(-1 * max(28px, env(safe-area-inset-right, 0px)));
+  background: var(--graphite); color: #E9E7E1;
+  clip-path: polygon(56px 0, 100% 0, 100% 100%, 0 100%);
+  background-image: repeating-linear-gradient(90deg, transparent 0 3px, rgb(255 255 255 / 0.035) 3px 4px);
+}
+.corner ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.corner a { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; font-size: 14.5px; font-weight: 500; }
+.corner a span { border-bottom: 1.5px solid transparent; transition: border-color 0.15s; }
+.corner a:hover span { border-bottom-color: currentColor; }
+/* On the dark corner the pictograms brighten, like lit key caps. */
+.corner .c-blog { color: #8FA8EC; } .corner .c-weeks { color: #EE8470; } .corner .c-projects { color: #EBC064; }
+.corner .c-photos { color: #92C493; } .corner .c-rotation { color: #C79BC7; } .corner .c-about { color: #CFAE95; }
+.corner .lang { color: #A9A69F; font-size: 14px; }
+@media (max-width: 960px) {
+  .head-in { flex-direction: column; align-items: stretch; }
+  .name { padding-block: 18px 14px; align-self: flex-start; }
+  .corner { clip-path: polygon(0 22px, 30px 0, 100% 0, 100% 100%, 0 100%); padding: 30px max(28px, env(safe-area-inset-right, 0px)) 16px max(28px, env(safe-area-inset-left, 0px)); margin-left: calc(-1 * max(28px, env(safe-area-inset-left, 0px))); flex-wrap: wrap; }
+}
+
+/* ---------- Stage: hero + sections, with the thread canvas behind ---------- */
+.stage { position: relative; }
+#threads { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.hero { position: relative; }
+.hero-in { position: relative; z-index: 1; padding-block: clamp(56px, 8vw, 112px) clamp(80px, 11vw, 150px); display: grid; gap: 20px; max-width: 34rem; }
+h1 { margin: 0; font-weight: 600; font-size: clamp(44px, 6.4vw, 80px); line-height: 1; letter-spacing: -0.03em; }
+.lede { margin: 0; font-size: clamp(19px, 2vw, 23px); line-height: 1.4; max-width: 26ch; }
+@media (max-width: 760px) { .hero-in { padding-bottom: 210px; } }
+
+main { position: relative; z-index: 1; }
+/* Each section's top edge is drawn by its own threads (on the canvas), not by a CSS border. */
+.sec { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: 12px 40px; padding-block: 44px 40px; }
+.sec h2 { margin: 0; font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 9px; align-self: start; padding-top: 2px; }
+.items { display: grid; gap: 26px; max-width: 40rem; }
+.item { display: block; text-decoration: none; }
+.item h3 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.item h3 span { background-image: linear-gradient(currentColor, currentColor); background-size: 0 1.5px; background-position: 0 100%; background-repeat: no-repeat; transition: background-size 0.25s; }
+.item:hover h3 span, .item:focus-visible h3 span { background-size: 100% 1.5px; }
+.item p { margin: 3px 0 0; color: var(--soft); }
+.item .where { margin-top: 6px; }
+.empty { margin: 0; color: var(--soft); max-width: 40rem; padding-top: 2px; }
+@media (max-width: 760px) { .sec { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Footer: a grooved panel ---------- */
+footer { position: relative; z-index: 1; margin-top: 8px; }
+.f-in { padding-block: 52px 76px; display: grid; gap: 8px; }
+.f-in p { margin: 0; max-width: 40rem; }
+.f-in .engraved { margin-bottom: 6px; }
+
+/* ---------- Prototype controls: Walkman-style keys in a diagonal graphite plate ---------- */
+.deck {
+  position: fixed; right: max(14px, env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 10;
+  background: var(--graphite); color: #E9E7E1; padding: 14px 16px 14px 34px; border-radius: 10px;
+  clip-path: polygon(22px 0, 100% 0, 100% 100%, 0 100%, 0 22px);
+  display: grid; gap: 10px; box-shadow: 0 10px 28px -14px rgb(0 0 0 / 0.5);
+}
+.deck .engraved { color: #8E8B84; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+/* Pill keys sunk into a recess, like FF / REW / PLAY / STOP. */
+.key {
+  font: 600 11px/1 var(--f); letter-spacing: 0.12em; text-transform: uppercase; font-stretch: 90%;
+  color: #2A2B2E; background: linear-gradient(180deg, #F2F1EC, #CFCDC6); border: 0; cursor: pointer;
+  border-radius: 999px; padding: 9px 14px; display: inline-flex; align-items: center; gap: 7px;
+  box-shadow: 0 0 0 3px #1B1C1E, 0 0 0 4px rgb(255 255 255 / 0.08), inset 0 -1px 0 rgb(0 0 0 / 0.18);
+  transition: transform 0.06s;
+}
+.key:active { transform: translateY(1px); }
+.key[aria-pressed="true"] { background: linear-gradient(180deg, #FFFFFF, #E2E0D9); }
+.key .led { width: 8px; height: 8px; border-radius: 50%; background: #1A3B22; box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.5); }
+.key[aria-pressed="true"] .led { background: var(--led); box-shadow: 0 0 6px var(--led); }
+@media (max-width: 560px) { .deck { left: 14px; right: 14px; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-blog" viewBox="0 0 24 24"><path d="M7.5 19.5 4 20l.5-3.5L15.8 5.2a2.1 2.1 0 0 1 3 3L7.5 19.5z"/><path d="M14 7l3 3"/></symbol>
+  <symbol id="i-weeks" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3.5v4M16 3.5v4"/><rect class="f" x="13.5" y="13.5" width="4" height="4" rx=".8"/></symbol>
+  <symbol id="i-projects" viewBox="0 0 24 24"><path d="M15.5 4.2a5 5 0 0 0-5.6 6.6L4.3 16.4a2.1 2.1 0 0 0 3 3l5.6-5.6a5 5 0 0 0 6.6-5.6l-2.8 2.8-2.6-.4-.4-2.6 2.8-2.8z"/></symbol>
+  <symbol id="i-photos" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2.5"/><circle cx="12" cy="13.5" r="3.5"/><path d="M8.5 7l1.5-2.5h4L15.5 7"/></symbol>
+  <symbol id="i-rotation" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2"/><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5"/></symbol>
+  <symbol id="i-about" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.6-3.8 3.4-6 7-6s6.4 2.2 7 6"/></symbol>
+</svg>
+
+<header class="head grooves pad"><div class="wrap head-in">
+  <a class="name" href="#top">Magnus H. Kaspersen</a>
+  <nav class="corner" aria-label="Main"><ul>
+    <li><a href="#blog"><svg class="pic c-blog"><use href="#i-blog"/></svg><span>Blog</span></a></li>
+    <li><a href="#weeks"><svg class="pic c-weeks"><use href="#i-weeks"/></svg><span>Weeks</span></a></li>
+    <li><a href="#projects"><svg class="pic c-projects"><use href="#i-projects"/></svg><span>Projects</span></a></li>
+    <li><a href="#photos"><svg class="pic c-photos"><use href="#i-photos"/></svg><span>Photos</span></a></li>
+    <li><a href="#rotation"><svg class="pic c-rotation"><use href="#i-rotation"/></svg><span>My rotation</span></a></li>
+    <li><a href="#about"><svg class="pic c-about"><use href="#i-about"/></svg><span>About</span></a></li>
+    <li><a class="lang" href="#top" lang="da"><span>Dansk</span></a></li>
+  </ul></nav>
+</div></header>
+
+<div class="stage" id="stage">
+  <canvas id="threads" aria-hidden="true"></canvas>
+  <section class="hero pad" aria-labelledby="hello"><div class="wrap">
+    <div class="hero-in" id="heroText">
+      <span class="engraved">Week 46 &nbsp;2026</span>
+      <h1 id="hello">Hi, I'm Magnus!</h1>
+      <p class="lede">This is my page which is currently quite empty. I promise there's more to come in the following weeks!</p>
+    </div>
+  </div></section>
+
+  <main class="pad"><div class="wrap">
+    <section class="sec" id="projects" data-thread="projects" aria-labelledby="h-projects">
+      <h2 id="h-projects"><svg class="pic c-projects"><use href="#i-projects"/></svg>Projects</h2>
+      <div class="items">
+        <a class="item" href="#projects"><h3><span>Daily xkcd</span></h3><p>An iPhone and iPad app with a new xkcd strip every day, on the Home Screen and the Lock Screen.</p><p class="where engraved">github.com/Magniswerfer/daily-xkcd</p></a>
+        <a class="item" href="#projects"><h3><span>PadSquire</span></h3><p>Linux and macOS tools for GameSir controllers, so you can configure and update them without Windows.</p><p class="where engraved">padsquire.com</p></a>
+        <a class="item" href="#projects"><h3><span>Stages</span></h3><p>A macOS menu-bar app that gives Stage Manager's stages names, colours and a switcher of their own.</p><p class="where engraved">github.com/Creative-Oak/stages</p></a>
+      </div>
+    </section>
+    <section class="sec" id="blog" data-thread="blog" aria-labelledby="h-blog">
+      <h2 id="h-blog"><svg class="pic c-blog"><use href="#i-blog"/></svg>Blog</h2>
+      <p class="empty">Nothing written yet. The first note will turn up here.</p>
+    </section>
+    <section class="sec" id="photos" data-thread="photos" aria-labelledby="h-photos">
+      <h2 id="h-photos"><svg class="pic c-photos"><use href="#i-photos"/></svg>Photos</h2>
+      <p class="empty">No photos yet.</p>
+    </section>
+  </div></main>
+</div>
+
+<footer class="grooves pad"><div class="wrap f-in">
+  <span class="engraved">Contact</span>
+  <p>Write to me at hello@magnushkaspersen.com or use the contact form.</p>
+  <p>Follow new writing by RSS, and I'm also on GitHub.</p>
+</div></footer>
+
+<div class="deck" role="group" aria-label="Prototype controls">
+  <span class="engraved">Motion</span>
+  <div class="row">
+    <button type="button" class="key" id="play" aria-pressed="true"><span class="led"></span>Play</button>
+    <button type="button" class="key" id="stop" aria-pressed="false">Stop</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  // Real content counts. Every section starts with a few threads; each item adds more.
+  var SECTIONS = [
+    { k: 'projects', items: 3 }, { k: 'blog', items: 0 }, { k: 'photos', items: 0 },
+    { k: 'weeks', items: 0 }, { k: 'rotation', items: 0 }, { k: 'about', items: 1 }
+  ];
+  var STRANDS = 6;
+  SECTIONS.forEach(function (s) { s.n = (4 + s.items * 4) * STRANDS; });
+
+  var stage = document.getElementById('stage'), cv = document.getElementById('threads'), g = cv.getContext('2d');
+  var W = 0, H = 0, DPR = 1, playing = true, visible = true, t0 = performance.now(), heroH = 0, textBottom = 0, padL = 28;
+  var targets = {};
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function css(n) { return getComputedStyle(root).getPropertyValue(n).trim(); }
+  function colors() { var c = {}; SECTIONS.forEach(function (s) { c[s.k] = css('--' + s.k); }); c.ink = css('--ink'); return c; }
+
+  function measure() {
+    var r = stage.getBoundingClientRect(); DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = Math.round(r.width); H = Math.round(r.height);
+    cv.width = W * DPR; cv.height = H * DPR; g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    heroH = document.querySelector('.hero').offsetHeight;
+    var ht = document.getElementById('heroText').getBoundingClientRect();
+    textBottom = ht.bottom - r.top - parseFloat(getComputedStyle(document.getElementById('heroText')).paddingBottom);
+    padL = document.querySelector('main .wrap').getBoundingClientRect().left - r.left;
+    // Where each section's threads come to rest: the top edge of its section, or the footer.
+    SECTIONS.forEach(function (s) {
+      var el = document.querySelector('[data-thread="' + s.k + '"]');
+      targets[s.k] = el ? (el.getBoundingClientRect().top - r.top) : H - 2;
+    });
+  }
+
+  // Sample a cubic Bezier into pts.
+  function bez(pts, a, b, c, d, n) {
+    for (var i = 1; i <= n; i++) {
+      var t = i / n, u = 1 - t;
+      pts.push([u*u*u*a[0] + 3*u*u*t*b[0] + 3*u*t*t*c[0] + t*t*t*d[0], u*u*u*a[1] + 3*u*u*t*b[1] + 3*u*t*t*c[1] + t*t*t*d[1]]);
+    }
+  }
+  // Stroke through points with quadratic smoothing, so threads are long and curved, never faceted.
+  function smooth(pts) {
+    g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+    for (var i = 1; i < pts.length - 1; i++) {
+      var mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+      g.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+    }
+    var l = pts[pts.length - 1]; g.lineTo(l[0], l[1]); g.stroke();
+  }
+
+  function smoothstep(e0, e1, x) { var t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
+
+  // Keep the headline clear: fade whatever is drawn behind the hero text.
+  function clearText() {
+    var el = document.getElementById('heroText'), r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+    var left = r.left - sr.left, right = r.right - sr.left, top = r.top - sr.top, bottom = textBottom + 10;
+    g.save();
+    g.globalCompositeOperation = 'destination-out';
+    var grd = g.createLinearGradient(left, 0, right + 80, 0);
+    grd.addColorStop(0, 'rgba(0,0,0,0.97)'); grd.addColorStop(0.8, 'rgba(0,0,0,0.92)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd; g.fillRect(0, top - 30, right + 80, bottom - top + 60);
+    g.restore();
+  }
+
+  // ---- Contours: a field of flowing lines in the hero that gather into strands and fan out
+  // again, like combed fibre, with a few lines dyed in each section's colour. Each section has
+  // its own thread line in its single colour along its top edge; the more it holds, the fuller.
+  function contours(time, C) {
+    var mobile = W < 760, lines = 84, list = [];
+    // On phones the field sits in the space below the text instead of behind it.
+    var yOff = mobile ? textBottom + 16 : 0, Hh = mobile ? Math.max(160, heroH - textBottom - 24) : heroH;
+    SECTIONS.forEach(function (s) { for (var j = 0; j < Math.round(s.n / STRANDS / 2); j++) list.push(s.k); });
+    var dyedAt = {}; for (var d = 0; d < list.length; d++) dyedAt[Math.round(6 + d * (lines - 12) / list.length)] = list[d];
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (var k = 0; k < lines; k++) {
+      var key = dyedAt[k], f = k / (lines - 1) - 0.5, pts = [];
+      for (var x = -20; x <= W + 20; x += 14) {
+        var u = x / W;
+        var cA = Hh * (0.3 + 0.14 * Math.sin(u * 3.1 + time * 0.12));
+        var cB = Hh * (0.66 + 0.14 * Math.sin(u * 2.3 - time * 0.1 + 1.7));
+        var sA = Hh * (0.06 + 0.7 * Math.pow(0.5 + 0.5 * Math.sin(u * 4.2 + time * 0.16), 2));
+        var sB = Hh * (0.05 + 0.6 * Math.pow(0.5 + 0.5 * Math.cos(u * 3.3 - time * 0.14), 2));
+        var m = 0.5 + 0.5 * Math.sin(u * 2.6 + time * 0.09 + f * 2.2);
+        var y = yOff + (1 - m) * (cA + sA * f) + m * (cB - sB * f) + Math.sin(u * 14 + k * 0.4) * 1.5;
+        pts.push([x, y]);
+      }
+      g.strokeStyle = key ? C[key] : C.ink;
+      g.globalAlpha = key ? 0.8 : 0.2; g.lineWidth = key ? 1.6 : 1;
+      smooth(pts);
+    }
+    // Section lines: each section's own threads, in its single colour, across the page.
+    SECTIONS.forEach(function (s) {
+      g.strokeStyle = C[s.k];
+      for (var j = 0; j < s.n / STRANDS; j++) {
+        var ty = targets[s.k] + (j / Math.max(1, s.n / STRANDS - 1) - 0.5) * (2.2 + s.items * 1.6), pts = [];
+        for (var x = padL; x <= W; x += 30) pts.push([x, ty + Math.sin(x / 80 + time * 0.4 + j) * 1.4]);
+        g.globalAlpha = 0.55; g.lineWidth = 1; smooth(pts);
+      }
+    });
+    g.globalAlpha = 1;
+  }
+
+  function frame(now) { g.clearRect(0, 0, W, H); contours((now - t0) / 1000, colors()); clearText(); }
+  function loop(now) { if (playing && visible && !reduce) frame(now); requestAnimationFrame(loop); }
+
+  measure(); frame(performance.now() + 3000); requestAnimationFrame(loop);
+  window.addEventListener('resize', function () { measure(); frame(performance.now()); });
+  new IntersectionObserver(function (e) { visible = e[0].isIntersecting; }).observe(stage);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { frame(performance.now()); });
+  if (document.fonts) document.fonts.ready.then(function () { measure(); frame(performance.now()); });
+
+  var play = document.getElementById('play'), stop = document.getElementById('stop');
+  function setPlaying(v) { playing = v; play.setAttribute('aria-pressed', String(v)); stop.setAttribute('aria-pressed', String(!v)); }
+  if (reduce) setPlaying(false);
+  play.addEventListener('click', function () { if (!reduce) setPlaying(true); });
+  stop.addEventListener('click', function () { setPlaying(false); });
+})();
+</script>
