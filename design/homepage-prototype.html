@@ -105,15 +105,16 @@ html, body { overflow-x: clip; }
     position: absolute; top: 100%; left: 0; right: 0; display: block;
     clip-path: inset(0 0 100% 0); visibility: hidden;
     transition: clip-path 0.32s cubic-bezier(0.2, 0.7, 0.2, 1), visibility 0s 0.32s;
-    filter: drop-shadow(0 14px 24px rgb(0 0 0 / 0.18));
+    filter: drop-shadow(0 18px 18px rgb(0 0 0 / 0.12));
   }
   .head[data-open] .fold { clip-path: inset(0 0 -40px 0); visibility: visible; transition: clip-path 0.32s cubic-bezier(0.2, 0.7, 0.2, 1); }
   .corner {
     display: block; background-color: var(--body); padding: 14px max(28px, env(safe-area-inset-right, 0px)) 18px max(28px, env(safe-area-inset-left, 0px));
-    border-block: 1px solid var(--groove);
+    border: 0;
   }
   /* One key per row: a single column of full-width pill keys in the recessed strip. */
-  .corner ul { display: flex; flex-direction: column; align-items: stretch; gap: 8px; border-radius: 26px; padding: 8px; }
+  /* No recessed strip on phones: just the keys on the page's own surface. */
+  .corner ul { display: flex; flex-direction: column; align-items: stretch; gap: 10px; border-radius: 0; padding: 0; background: none; box-shadow: none; }
   .corner a { display: flex; width: 100%; justify-content: flex-start; gap: 12px; padding: 13px 18px; font-size: 16px; }
   .corner .pic { width: 20px; height: 20px; }
   .corner a[aria-current]::before { order: 3; margin-left: auto; }
