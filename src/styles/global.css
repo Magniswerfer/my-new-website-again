@@ -28,6 +28,12 @@
   --rule: rgb(18 22 20 / 0.14);
   --selection: rgb(31 107 71 / 0.18);
   --pine-ghost: rgb(31 107 71 / 0.32);
+  /* Instrument details (Braun-style): indicator lights, perforations, switch. */
+  --signal: var(--pine);
+  --glow: rgb(31 107 71 / 0.45);
+  --hole: #d5dad2;
+  --hole-shade: rgb(18 22 20 / 0.22);
+  --knob: #fbfbf8;
   --grain-opacity: 0.09;
   --grain-blend: multiply;
 
@@ -66,6 +72,10 @@
     --rule: rgb(229 234 230 / 0.14);
     --selection: rgb(98 199 149 / 0.25);
     --pine-ghost: rgb(98 199 149 / 0.3);
+    --glow: rgb(98 199 149 / 0.55);
+    --hole: #232a25;
+    --hole-shade: rgb(0 0 0 / 0.55);
+    --knob: #46504a;
     --grain-opacity: 0.06;
     --grain-blend: screen;
     color-scheme: dark;

@@ -16,7 +16,7 @@ const items = [
 
 <header class="wrap row">
   <div class="margin">
-    <a class="mark" href={url(lang)}>Magnus H. Kaspersen<span class="dot offprint" aria-hidden="true"></span></a>
+    <a class="mark" href={url(lang)}>Magnus H. Kaspersen<span class="dot" aria-hidden="true"></span></a>
   </div>
   <nav class="column" aria-label={lang === 'da' ? 'Hovedmenu' : 'Main'}>
     <ul>
@@ -24,8 +24,13 @@ const items = [
         <li><a href={url(lang, slug)} aria-current={current === slug ? 'page' : undefined}>{t(lang, key)}</a></li>
       ))}
       <li class="lang">
-        <a href={alternate} hreflang={other(lang)} lang={other(lang)} data-astro-reload data-lang-switch={other(lang)}>
-          {t(lang, 'lang.switch')}
+        <a
+          class="switch" href={alternate} hreflang={other(lang)} data-astro-reload
+          data-lang-switch={other(lang)} data-pos={lang} aria-label={t(lang, 'lang.switchLabel')}
+        >
+          <span class="opt en" aria-hidden="true">EN</span>
+          <span class="track" aria-hidden="true"><span class="knob"></span></span>
+          <span class="opt da" aria-hidden="true">DA</span>
         </a>
       </li>
     </ul>
@@ -33,10 +38,18 @@ const items = [
 </header>
 
 <script>
-  // Remember an explicit language choice so the root URL respects it next time.
+  // The language switch: remember the choice (so the root URL respects it),
+  // slide the knob across, then go to the same page in the other language.
   document.addEventListener('click', (e) => {
-    const a = (e.target as Element).closest<HTMLElement>('[data-lang-switch]');
-    if (a) try { localStorage.setItem('lang', a.dataset.langSwitch!); } catch {}
+    const a = (e.target as Element).closest<HTMLAnchorElement>('[data-lang-switch]');
+    if (!a) return;
+    const to = a.dataset.langSwitch!;
+    try { localStorage.setItem('lang', to); } catch {}
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    e.preventDefault();
+    a.dataset.pos = to;
+    setTimeout(() => location.assign(a.href), 220);
   });
 </script>
 
@@ -47,15 +60,33 @@ const items = [
     font-family: var(--f-display); font-weight: 800; font-size: var(--t-body);
     letter-spacing: var(--track); line-height: 1.15; text-decoration: none; display: inline-block; white-space: nowrap;
   }
+  /* The name's dot is a steady indicator light. */
   .dot {
-    display: inline-block; width: 0.38em; height: 0.38em; border-radius: 50%;
-    background: var(--pine); margin-left: 0.3em; vertical-align: 0.05em;
+    display: inline-block; width: 0.4em; height: 0.4em; border-radius: 50%;
+    background: var(--signal); margin-left: 0.32em; vertical-align: 0.05em;
+    box-shadow: inset 0 -1px 1px rgb(0 0 0 / 0.2), 0 0 6px var(--glow);
   }
   ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.2rem 1.4rem; }
   nav a { text-decoration: none; font-size: 0.97rem; }
   nav a:hover { text-decoration: underline; text-decoration-color: var(--pine); }
   nav a[aria-current='page'] { text-decoration: underline; text-decoration-color: var(--pine); text-decoration-thickness: 2px; text-underline-offset: 0.35em; }
-  .lang a { color: var(--muted); }
+  /* EN/DA slide switch: a recessed track with a raised knob. */
+  .switch { display: inline-flex; align-items: center; gap: 0.45rem; text-decoration: none !important; }
+  .opt { font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.02em; color: var(--muted); transition: color 0.18s; }
+  .switch[data-pos='en'] .en, .switch[data-pos='da'] .da { color: var(--ink); }
+  .track {
+    position: relative; width: 2.1rem; height: 1.15rem; border-radius: 999px;
+    background: var(--hole); box-shadow: inset 0 1px 2px var(--hole-shade), inset 0 0 0 1px var(--rule);
+  }
+  .knob {
+    position: absolute; top: 2px; left: 2px; width: calc(1.15rem - 4px); height: calc(1.15rem - 4px); border-radius: 50%;
+    background: var(--knob);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.5);
+    transition: transform 0.2s var(--ease);
+  }
+  .switch[data-pos='da'] .knob { transform: translateX(calc(2.1rem - 1.15rem)); }
+  .switch:hover .knob { box-shadow: 0 1px 3px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.5); }
+  @media (prefers-reduced-motion: reduce) { .knob, .opt { transition: none; } }
   @media (max-width: 52rem) {
     header { row-gap: 0.75rem; }
     .mark { font-size: 1.25rem; }

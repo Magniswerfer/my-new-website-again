@@ -58,24 +58,34 @@ const summary = lang === 'da'
 </figure>
 
 <style>
-  .weeks { margin: 0; display: grid; gap: 0.6rem; }
+  /* A speaker grille (Braun-style perforations): every week is a hole,
+     weeks with something new are lit, this week is the indicator light. */
+  .weeks { margin: 0; display: grid; gap: 0.7rem; }
   ol {
     list-style: none; margin: 0; padding: 0;
-    display: grid; grid-template-columns: repeat(13, 0.75rem); gap: 3px;
+    display: grid; grid-template-columns: repeat(13, 0.6875rem); gap: 0.3125rem;
   }
-  li { width: 0.75rem; height: 0.75rem; position: relative; }
-  li > * { position: absolute; inset: 0; display: block; }
-  .past > * { background: color-mix(in srgb, var(--rule) 60%, transparent); }
-  .future > * { box-shadow: inset 0 0 0 1px var(--rule); }
-  [data-made] > * { background: var(--pine); box-shadow: 1px 1px 0 var(--pine-ghost); }
-  [data-made] > a:hover, [data-made] > a:focus-visible { background: var(--ink); }
-  .now > * { box-shadow: inset 0 0 0 2px var(--ink); }
-  .now[data-made] > * { background: var(--pine); box-shadow: inset 0 0 0 2px var(--ink); }
-  .now::after {
-    content: ''; position: absolute; inset: -3px; border: 1.5px solid var(--pine);
-    animation: breathe 3.6s ease-in-out infinite; pointer-events: none;
+  li { width: 0.6875rem; height: 0.6875rem; position: relative; }
+  li > * {
+    position: absolute; inset: 0; display: block; border-radius: 50%;
+    background: var(--hole); box-shadow: inset 0 1px 1.5px var(--hole-shade);
   }
-  @keyframes breathe { 0%, 100% { opacity: 0; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
-  @media (prefers-reduced-motion: reduce) { .now::after { animation: none; opacity: 1; } }
+  .future > * { opacity: 0.5; }
+  [data-made] > * {
+    background: var(--signal);
+    box-shadow: inset 0 -1px 1px rgb(0 0 0 / 0.18), 0 0 5px var(--glow);
+  }
+  [data-made] > a:hover, [data-made] > a:focus-visible { background: var(--ink); box-shadow: none; }
+  .now > * {
+    background: var(--signal); opacity: 1;
+    animation: glow 3.2s ease-in-out infinite;
+  }
+  @keyframes glow {
+    0%, 100% { box-shadow: inset 0 -1px 1px rgb(0 0 0 / 0.18), 0 0 3px var(--glow); }
+    50% { box-shadow: inset 0 -1px 1px rgb(0 0 0 / 0.18), 0 0 10px 2px var(--glow); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .now > * { animation: none; box-shadow: 0 0 8px 1px var(--glow); }
+  }
   figcaption { font-size: 0.75rem; max-width: 13rem; line-height: 1.4; }
 </style>
