@@ -34,7 +34,7 @@ PROFILE = [(0, 0.0), (1, 0.12), (3, 0.34), (6, 0.47), (9, 0.55), (12, 0.62), (15
            (124.2, 0.57), (125, 0.44)]
 GROOVES = [92.5, 101.8, 110.8]
 
-FACE = dict(eye_x=0.36, eye_s=0.335, eye_w=0.155, eye_h=0.255,
+FACE = dict(eye_x=0.34, eye_s=0.335, eye_w=0.16, eye_h=0.264,
             smile_w=0.125, smile_end=0.392, smile_bot=0.424, smile_r=0.024,
             led_x=0.0, led_s=0.615, led_r=0.072,
             key_x=0.4, key_s=0.615, key_w=0.42, key_h=0.17)
@@ -120,7 +120,7 @@ def carve(body, feats):
     co = np.empty(n * 3); me.vertices.foreach_get('co', co); co = co.reshape(n, 3)
     nor = np.empty(n * 3); me.vertices.foreach_get('normal', nor); nor = nor.reshape(n, 3)
     x, z = co[:, 0], co[:, 2]
-    disp = np.zeros(n)
+    disp = np.zeros(n); raise_ = np.zeros(n)
     front = co[:, 1] < -0.2
     for f in feats:
         if f['kind'] == 'ellipse':
@@ -135,10 +135,14 @@ def carve(body, feats):
                 t = np.clip(((x - p0[0]) * v[0] + (z - p0[1]) * v[1]) / L2, 0, 1)
                 d = np.minimum(d, np.hypot(x - p0[0] - t * v[0], z - p0[1] - t * v[1]))
             sdf = d - f['r']
+        if f.get('rim'):
+            h, w = f['rim']
+            raise_ += np.where(front, h * np.exp(-((sdf - w) / w) ** 2), 0)
+            continue
         rho = f.get('rho', 0.018)
         dd = -f['depth'] * (1 - smoothstep(-rho, rho, sdf))
         disp = np.where(front, np.minimum(disp, dd), disp)
-    co += nor * disp[:, None]
+    co += nor * (disp + raise_)[:, None]
     me.vertices.foreach_set('co', co.ravel()); me.update()
 
 
@@ -225,7 +229,7 @@ def materials():
     tex = nt.nodes.new('ShaderNodeTexNoise'); tex.inputs['Scale'].default_value = 260; tex.inputs['Detail'].default_value = 4
     bump = nt.nodes.new('ShaderNodeBump'); bump.inputs['Strength'].default_value = 0.06; bump.inputs['Distance'].default_value = 0.002
     nt.links.new(tex.outputs['Fac'], bump.inputs['Height']); nt.links.new(bump.outputs['Normal'], p.inputs['Normal'])
-    gloss, _ = mat('Gloss', (0.012, 0.012, 0.014), 0.32, **{'Coat Weight': 0.6, 'Coat Roughness': 0.14, 'Specular IOR Level': 0.4})
+    gloss, _ = mat('Gloss', (0.0086, 0.0086, 0.0086), 0.23, **{'IOR': 1.46})   # #171717
     ink, _ = mat('Ink', (0.006, 0.006, 0.007), 0.5)
     led, _ = mat('LED', (0.028, 0.451, 0.084), 0.08, **{'Emission Color': (0.028, 0.451, 0.084, 1), 'Emission Strength': 3.5,
                                                        'Coat Weight': 1.0, 'Coat Roughness': 0.05})
@@ -283,7 +287,7 @@ def build(pose='front'):
         ob.data.materials.append(mat); parts.append(ob)
         for q in ends:
             e = sphere(name + 'End', r, r, r, mat, segs=32); e.location = q
-        feats.append(dict(kind='poly', pts=[(x, zf(s_)) for x, s_ in pts], r=r + 0.011, depth=0.02, rho=0.008))
+        feats.append(dict(kind='poly', pts=[(x, zf(s_)) for x, s_ in pts], r=r + 0.0035, depth=0.012, rho=0.003))
 
     eye_s = F['eye_s'] - (0.02 if face == 'o' else 0)
     if face == 'closed':
@@ -291,20 +295,25 @@ def build(pose='front'):
             T = 1.1
             pts = [(sx * F['eye_x'] + 0.085 * math.sin(t) / math.sin(T),
                     eye_s + 0.02 + 0.045 * (math.cos(t) - math.cos(T)) / (1 - math.cos(T))) for t in np.linspace(-T, T, 28)]
-            bar('Lid', pts, 0.02, -0.02, M['gloss'])
+            bar('Lid', pts, 0.02, -0.014, M['gloss'])
     else:
         big = 1.12 if face == 'o' else 1.0
         ew, eh = F['eye_w'] * big, F['eye_h'] * big
         for sx in (-1, 1):
             # A pocket a little larger than the eye; the eye is a shallow convex lens inside it.
-            feats.append(dict(kind='ellipse', cx=sx * F['eye_x'], cz=zf(eye_s), a=ew / 2 + 0.011, b=eh / 2 + 0.011, depth=0.022, rho=0.008))
-            e = sphere('Eye', ew / 2, eh / 2, 0.03, M['gloss'])
-            orient(e, *surface(body, sx * F['eye_x'], eye_s), lift=-0.034)
+            # Inset and domed: a shallow, crisp-edged socket a hair wider than the eye; the eye's
+            # widest outline sits on the socket floor, so the rim reads as set in, and its crown rises
+            # clearly above the shell to catch a highlight.
+            D = 0.016
+            feats.append(dict(kind='ellipse', cx=sx * F['eye_x'], cz=zf(eye_s), a=ew / 2 + 0.0035, b=eh / 2 + 0.0035,
+                              depth=D, rho=0.0035))
+            e = sphere('Eye', ew / 2, eh / 2, ew * 0.26, M['gloss'])
+            orient(e, *surface(body, sx * F['eye_x'], eye_s), lift=-D - 0.003)
     if face == 'smile':
         T = 1.2
         pts = [(F['smile_w'] * math.sin(t) / math.sin(T),
                 F['smile_bot'] - (F['smile_bot'] - F['smile_end']) * (1 - math.cos(t)) / (1 - math.cos(T))) for t in np.linspace(-T, T, 44)]
-        bar('Smile', pts, F['smile_r'], -0.022, M['gloss'])
+        bar('Smile', pts, F['smile_r'], -0.014, M['gloss'])
     elif face == 'o':
         feats.append(dict(kind='circle', cx=0, cz=zf(0.365), r=0.055, depth=0.04))
         m = sphere('Mouth', 0.035, 0.045, 0.03, M['gloss']); orient(m, *surface(body, 0, 0.365), lift=-0.035)
@@ -384,15 +393,19 @@ def stage(yaw, elev=8.0, size=700, samples=48, dark=True, lens=100, dist=13.0, t
     bg.inputs['Color'].default_value = (0.05, 0.05, 0.055, 1) if dark else (0.9, 0.88, 0.85, 1)
     bg.inputs['Strength'].default_value = 1.0 if dark else 0.35
 
-    def area(name, loc, energy, size, color=(1, 0.97, 0.93)):
+    def area(name, loc, energy, size, color=(1, 0.97, 0.93), aim=(0, 0, 1.3)):
         bpy.ops.object.light_add(type='AREA', location=loc)
         L = bpy.context.object; L.name = name; L.data.energy = energy; L.data.size = size; L.data.color = color
-        L.rotation_euler = (Vector((0, 0, 1.3)) - Vector(loc)).to_track_quat('-Z', 'Y').to_euler()
+        L.rotation_euler = (Vector(aim) - Vector(loc)).to_track_quat('-Z', 'Y').to_euler()
     area('Key', (-3.4, -4.6, 6.0), 1300, 7.0)
     area('Fill', (5.0, -3.5, 2.5), 90, 6.0, (0.95, 0.97, 1.0))
     area('Rim', (3.5, 5.0, 4.0), 700, 4.0)
     area('Rim2', (-4.0, 4.0, 3.0), 400, 4.0)
     area('Top', (0, 0, 8), 150, 6.0)
+    # The eye light: small, just above the camera's left, so each eye catches a dot in its upper-left.
+    e = math.radians(elev); tz = target if target is not None else ZT * 0.5 + 0.05
+    area('EyeLight', (-1.1, -4.6, ZT - 0.33 * BODY_H + 2.4), 70, 0.12, (1, 1, 1), aim=(0, -1, ZT - 0.33 * BODY_H))
+    bpy.data.objects['EyeLight'].data.shape = 'DISK'
 
     bpy.ops.mesh.primitive_plane_add(size=60)
     gp = bpy.context.object
