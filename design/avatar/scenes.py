@@ -72,6 +72,7 @@ def mats():
         bulb=mat('Bulb', (1.0, 0.85, 0.5), 0.1, **{'Emission Color': (1.0, 0.75, 0.35, 1), 'Emission Strength': 6.0,
                                                     'Transmission Weight': 0.3}),
         ink=bpy.data.materials['Ink'],
+        accent=mat('Accent', (0.028, 0.45, 0.084), 0.4),
         wood=mat('Walnut', (0.22, 0.12, 0.06), 0.45, **{'Coat Weight': 0.3}),
         lens=mat('Lens', (0.02, 0.03, 0.035), 0.05, **{'Coat Weight': 1.0}),
     )
@@ -1014,25 +1015,78 @@ def headset(M):
         hw = B.half_width(s_ * 125); y = -math.sqrt(max(0.0, hw * hw - x * x)) * B.DEPTH
         n = Vector((x, y / B.DEPTH, 0)).normalized()
         return tuple(Vector((x, y, B.ZT - s_ * B.BODY_H)) + n * out)
-    pts = [(x0, -0.02, zc - 0.14), on(0.86, 0.4), on(0.62, 0.43), on(0.36, 0.42, 0.06)]
+    # Traced along the cheek with many points (straight segments between a few points cut through
+    # the curved shell), 0.1 clear of it, below the eye, ending beside the corner of his mouth.
+    pts = [(x0, -0.02, zc - 0.14)]
+    for t in np.linspace(0, 1, 16):
+        x = 0.92 - 0.66 * t
+        s_ = 0.41 + 0.035 * math.sin(math.pi * t) - 0.02 * t
+        pts.append(on(x, s_, 0.1))
     boom = tube('MicBoom', pts, 0.022, M['graphite'])
     mic = ball('Mic', 0.05, M['graphite'], (1.2, 1, 1)); mic.location = pts[-1]
     boom.parent = hp; mic.parent = hp
     return hp
 
 
+def gaming_chair(M):
+    """A racing-style gaming chair sized for him: a bolstered seat, a tall back with side wings and a
+    headrest, padded armrests on posts, a gas lift and a five-star base on casters. Graphite with
+    green accent stripes (his LED's green). Front faces -y; floor at z = 0."""
+    g, acc, metal = M['graphite'], M['accent'], M['metal']
+    parts = []
+    seat = rbox('GSeat', (2.3, 2.1, 0.3), 0.12, g, segs=6); seat.location = (0, 0.1, 1.05); parts.append(seat)
+    for sx in (1, -1):
+        bol = rbox(f'GSeatBolster{sx}', (0.34, 2.0, 0.26), 0.12, g, segs=6); bol.location = (sx * 1.02, 0.1, 1.22)
+        bol.rotation_euler = (0, math.radians(sx * 10), 0); parts.append(bol)
+    back = rbox('GBack', (2.25, 0.36, 3.1), 0.16, g, segs=6); back.location = (0, 1.25, 2.6)
+    back.rotation_euler = (math.radians(-9), 0, 0); parts.append(back)
+    for sx in (1, -1):
+        w = rbox(f'GWing{sx}', (0.36, 0.5, 2.1), 0.15, g, segs=6); w.location = (sx * 1.05, 1.08, 2.25)
+        w.rotation_euler = (math.radians(-9), 0, math.radians(sx * -14)); parts.append(w)
+        st = rbox(f'GStripe{sx}', (0.1, 0.05, 2.6), 0.02, acc, segs=2); st.location = (sx * 0.62, 1.05, 2.65)
+        st.rotation_euler = (math.radians(-9), 0, 0); parts.append(st)
+        post = cyl(f'GArmPost{sx}', 0.06, 0.55, metal, verts=24); post.location = (sx * 1.3, 0.25, 1.35); parts.append(post)
+        pad = rbox(f'GArmPad{sx}', (0.32, 1.0, 0.14), 0.06, g, segs=4); pad.location = (sx * 1.3, 0.15, 1.68); parts.append(pad)
+    head = rbox('GHeadrest', (1.2, 0.3, 0.5), 0.14, g, segs=6); head.location = (0, 1.2, 4.05)
+    head.rotation_euler = (math.radians(-9), 0, 0); parts.append(head)
+    gas = cyl('GLift', 0.1, 0.75, metal, verts=32); gas.location = (0, 0.25, 0.5); parts.append(gas)
+    for i in range(5):
+        a = 2 * math.pi * i / 5 + math.pi / 2
+        arm = rbox(f'GBase{i}', (1.15, 0.16, 0.1), 0.04, g, segs=3)
+        arm.location = (0.55 * math.cos(a), 0.25 + 0.55 * math.sin(a), 0.2); arm.rotation_euler = (0, 0, a); parts.append(arm)
+        wh = cyl(f'GCaster{i}', 0.08, 0.07, g, verts=20); wh.rotation_euler = (0, math.radians(90), a)
+        wh.location = (1.08 * math.cos(a), 0.25 + 1.08 * math.sin(a), 0.08); parts.append(wh)
+    for p_ in parts:
+        if p_.name.startswith(('GSeat', 'GBack', 'GWing', 'GHeadrest', 'GArmPad')):
+            sub = p_.modifiers.new('S', 'SUBSURF'); sub.levels = 1; sub.render_levels = 2
+    return group('GamingChair', parts)
+
+
 def scene_gaming(rig, M):
-    """For a Discord avatar: headset on, controller in both mittens; thumbs tapping, a little lean as
-    he dodges something on screen and back, a blink. 4 s, loops."""
+    """For a Discord avatar: in a gaming chair, headset on, controller in both mittens; thumbs tapping,
+    a little lean as he dodges something on screen and back, a blink. 4 s, loops."""
     act = B.new_action(rig, 'gaming')
     for f in range(1, N + 2, 4): breathe(rig, f)
     lean = [(1, 0), (34, 0), (42, -4), (50, -5), (58, 1.5), (66, 0), (N + 1, 0)]
+    pb = rig.pose.bones
+    SEAT = 1.2                                                       # the seat's top
     for f, y in lean:
-        B.key_body(rig, f, lean_y=y, lean_x=2)
-        B.joint(rig, 'head', f, x=7 + (2 if 40 < f < 60 else 0), y=-0.6 * y)
+        B.bone_loc(pb['body'], (0, 0, SEAT - B.Z0 - 0.02)); pb['body'].keyframe_insert('location', frame=f)
+        pb['body'].rotation_quaternion = B.wq(pb['body'], Matrix.Rotation(math.radians(y), 3, 'Y') @ Matrix.Rotation(math.radians(-6), 3, 'X'))
+        pb['body'].keyframe_insert('rotation_quaternion', frame=f)
+        B.joint(rig, 'head', f, x=9 + (2 if 40 < f < 60 else 0), y=-0.6 * y)
+    # Short legs: the feet dangle over the front of the seat, swinging a little.
+    for s_, sx in (('L', 1), ('R', -1)):
+        fb = pb[f'foot.{s_}']; head = fb.bone.head_local
+        for f in range(1, N + 2, 8):
+            sw = 0.05 * math.sin(2 * math.pi * f / N + (0 if s_ == 'L' else math.pi))
+            B.bone_loc(fb, (sx * 0.06, -0.5 + sw - head.y + LEG_Y0, SEAT - 0.35 - head.z))
+            fb.rotation_quaternion = B.wq(fb, Matrix.Rotation(math.radians(-55), 3, 'X')); key(fb, f) if False else None
+            fb.keyframe_insert('location', frame=f); fb.keyframe_insert('rotation_quaternion', frame=f)
     blink((80,))
     pad = controller(M); pad.scale = (1.45, 1.45, 1.45)
-    zs = shoulder_z(); yf = front_y(0.66)
+    bpy.context.scene.frame_set(1); bpy.context.view_layer.update()
+    zs = shoulder_z() + (SEAT - B.Z0 - 0.02); yf = front_y(0.66)
     def at(f):
         y = B.smooth_track(lean, f)
         tap = 0.012 * math.sin(2 * math.pi * f / 6) * (0 if 40 < f < 62 else 1)
@@ -1042,8 +1096,24 @@ def scene_gaming(rig, M):
          curl=30, hug=24, step=2)
     B.stash(rig, act, 'gaming')
     B.use_move('gaming'); bpy.context.scene.frame_set(1)
-    hs = headset(M); bind_to(rig, hs, 'head')
-    return [pad, hs]
+    hs = headset(M)
+    # It's built around his head at rest; carry it to where the posed head is before attaching it.
+    bpy.context.view_layer.update()
+    hb = rig.pose.bones['head']
+    hs.matrix_world = (rig.matrix_world @ hb.matrix @ hb.bone.matrix_local.inverted()) @ hs.matrix_world
+    bind_to(rig, hs, 'head')
+    chair = gaming_chair(M); bind_to(rig, chair, 'root')
+    # Slide the chair back until its back meets his back.
+    bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get(); body = bpy.data.objects['Body']
+    me = body.evaluated_get(dg).to_mesh(); W = body.matrix_world
+    back_y = max((W @ v.co).y for v in me.vertices if 1.6 < (W @ v.co).z < 2.6)
+    body.evaluated_get(dg).to_mesh_clear()
+    chair.location.y += back_y - (1.25 - 0.18) + 0.03
+    return [pad, hs, chair]
+
+
+LEG_Y0 = 0.0
 
 
 SCENES = {   # name: (builder, face, camera view)
