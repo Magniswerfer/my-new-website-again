@@ -38,7 +38,10 @@ FACE = dict(eye_x=0.34, eye_s=0.305, eye_w=0.16, eye_h=0.264,
             smile_w=0.125, smile_end=0.36, smile_bot=0.392, smile_r=0.024,
             led_x=0.0, led_s=0.53, led_r=0.072,
             key_x=0.4, key_s=0.53, key_w=0.42, key_h=0.17)
-ARM = dict(x=0.95, y=-0.12, s=0.7, rx=0.34, ry=0.35, rz=0.38)
+# Arms: short plump mittens. The shoulder pivot sits at the arm's upper inner end, just inside the
+# shell near the top of the ribs; at rest the arm hangs beside the lower body, angled slightly forward.
+ARM = dict(x=0.93, y=-0.12, s=0.6, length=0.76, radius=0.27, flat=0.88, root=0.12,
+           out=16.0, fwd=10.0)   # rest angles (degrees): away from the body, and forward
 LEG = dict(x=0.42, y=-0.06, r=0.33, ry=0.37)
 
 
@@ -51,8 +54,8 @@ def pchip(xs, ys, x):
 OUTLINE = [(0.0, 0.0), (0.006, 0.17), (0.025, 0.372), (0.05, 0.493), (0.075, 0.581), (0.1, 0.65), (0.125, 0.706),
            (0.15, 0.753), (0.175, 0.794), (0.2, 0.827), (0.225, 0.859), (0.25, 0.883), (0.275, 0.906), (0.3, 0.926),
            (0.325, 0.944), (0.35, 0.957), (0.375, 0.971), (0.4, 0.98), (0.425, 0.989), (0.45, 0.996), (0.5, 1.0),
-           (0.6, 1.0), (0.88, 1.0), (0.91, 0.995), (0.935, 0.982), (0.955, 0.962), (0.972, 0.932),
-           (0.986, 0.885), (0.996, 0.81), (1.0, 0.74)]   # a bullet: dome, parallel sides, small fillet, flat base
+           (0.6, 1.0), (0.85, 1.0), (0.875, 0.99), (0.9, 0.97), (0.925, 0.94), (0.95, 0.9), (0.97, 0.855),
+           (0.986, 0.8), (0.996, 0.73), (1.0, 0.66)]   # a bullet: dome, parallel sides, tucking in below the last ridge
 
 
 def half_width(s):
@@ -182,16 +185,66 @@ def make_leg(side):
     return ob
 
 
-def make_arm(side):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=64, ring_count=40, radius=1)
-    ob = bpy.context.object; ob.name = f'Arm.{side}'
-    for v in ob.data.vertices:
-        k = 1 - 0.06 * v.co.z          # a touch narrower at the top
-        v.co = Vector((v.co.x * ARM['rx'] * k, v.co.y * ARM['ry'] * k, v.co.z * ARM['rz']))
-    for p in ob.data.polygons: p.use_smooth = True
+def arm_rest(side):
+    """Shoulder pivot P and the arm's rest direction d (unit) for one side."""
     sx = 1 if side == 'L' else -1
-    ob.location = (sx * ARM['x'], ARM['y'], ZT - ARM['s'] * BODY_H)
-    return ob
+    P = Vector((sx * ARM['x'], ARM['y'], ZT - ARM['s'] * BODY_H))
+    d = Vector((0, 0, -1))
+    d.rotate(Matrix.Rotation(math.radians(-sx * ARM['out']), 3, 'Y'))   # away from the body
+    d.rotate(Matrix.Rotation(math.radians(-ARM['fwd']), 3, 'X'))        # a little forward
+    return P, d.normalized()
+
+
+def make_arm(side):
+    """A mitten: an egg that is narrow at the buried root and fullest towards its round tip,
+    built in rings along the arm so it bends smoothly. Two vertex groups blend through the middle."""
+    sx = 1 if side == 'L' else -1
+    P, d = arm_rest(side)
+    out = Vector((sx, 0, 0)); out = (out - d * out.dot(d)).normalized()
+    fwd = d.cross(out).normalized() * (-sx)
+    if fwd.y > 0: fwd = -fwd
+    L, R, root = ARM['length'], ARM['radius'], ARM['root']
+    me = bpy.data.meshes.new(f'Arm.{side}'); bm = bmesh.new()
+    rings, segs = 56, 48
+    grid = []; us = []
+    for i in range(1, rings):
+        u = i / rings
+        r = R * math.sqrt(max(0.0, 1 - (2 * u - 1) ** 2)) * (0.78 + 0.32 * u)
+        c = P - d * root + d * (L + root) * u
+        row = []
+        for j in range(segs):
+            a = 2 * math.pi * j / segs
+            row.append(bm.verts.new(c + out * (r * math.cos(a)) + fwd * (r * ARM['flat'] * math.sin(a))))
+        grid.append(row); us.append(u)
+    for i in range(len(grid) - 1):
+        for j in range(segs):
+            bm.faces.new((grid[i][j], grid[i][(j + 1) % segs], grid[i + 1][(j + 1) % segs], grid[i + 1][j]))
+    top = bm.verts.new(P - d * root); tip = bm.verts.new(P - d * root + d * (L + root))
+    for j in range(segs):
+        bm.faces.new((top, grid[0][(j + 1) % segs], grid[0][j]))
+        bm.faces.new((tip, grid[-1][j], grid[-1][(j + 1) % segs]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me); bm.free()
+    ob = bpy.data.objects.new(f'Arm.{side}', me); bpy.context.collection.objects.link(ob)
+    for p_ in me.polygons: p_.use_smooth = True
+    # Weights: the upper bone holds the root half, the lower bone the tip, blended through the middle.
+    gu = ob.vertex_groups.new(name=f'arm_upper.{side}'); gl = ob.vertex_groups.new(name=f'arm_lower.{side}')
+    for v in me.vertices:
+        u = max(0.0, min(1.0, (v.co - (P - d * root)).dot(d) / (L + root)))
+        t = max(0.0, min(1.0, (u - 0.35) / 0.4)); wl = t * t * (3 - 2 * t)
+        gu.add([v.index], 1 - wl, 'REPLACE'); gl.add([v.index], wl, 'REPLACE')
+    # Contact squash: the front of the mitten's tip flattens a little and spreads to keep its volume.
+    ob.shape_key_add(name='Basis')
+    sq = ob.shape_key_add(name='squash', from_mix=False)
+    for i, v in enumerate(me.vertices):
+        rel = v.co - P
+        u = max(0.0, min(1.0, (rel.dot(d) + root) / (L + root)))
+        k = max(0.0, (u - 0.45) / 0.55)
+        f = rel.dot(fwd)
+        o = rel.dot(out)
+        new = v.co - fwd * (max(0.0, f) * 0.22 * k) + out * (o * 0.06 * k)
+        sq.data[i].co = new
+    return ob, P, d
 
 
 def surface(body, x, s):
@@ -270,26 +323,111 @@ def materials():
     shine, _ = mat('Shine', (1, 1, 1), 0.3, **{'Emission Color': (1, 1, 1, 1), 'Emission Strength': 0.6})
     pocket, _ = mat('Pocket', (0.36, 0.34, 0.32), 0.6)
     housing, _ = mat('Housing', (0.42, 0.4, 0.38), 0.55)
-    return dict(housing=housing, pocket=pocket, shine=shine, plastic=plastic, gloss=gloss, ink=ink, led=led, ledoff=ledoff, keycap=keycap, slot=slot)
+    ball, _ = mat('Ball', (0.8, 0.55, 0.2), 0.6)
+    return dict(ball=ball, housing=housing, pocket=pocket, shine=shine, plastic=plastic, gloss=gloss, ink=ink, led=led, ledoff=ledoff, keycap=keycap, slot=slot)
 
 
 POSES = {
-    # bone rotations in degrees (x, y, z); face: smile | closed | o ; led on/off
-    'front': {},
-    'wave': {'arm.L': (0, -150, 0)},
-    'cheer': {'arm.L': (0, -140, 0), 'arm.R': (0, 140, 0), 'face': 'closed'},
-    'sleep': {'body': (8, 0, 0), 'face': 'closed', 'led': False},
-    'surprised': {'body': (-5, 0, 0), 'face': 'o'},
+    # face: smile | closed | o ; led on/off ; anim: (action, frame) to pose from
+    'front': {}, 'rest': {},
+    'wave': {'anim': ('wave', 15)},
+    'reach': {'anim': ('reach', 30), 'ball': True},
+    'sleep': {'face': 'closed', 'led': False, 'tilt': (6, 0)},
+    'surprised': {'face': 'o'},
 }
 
+FPS = 24
 
-def build(pose='front'):
+
+def wq(pb, rot_world):
+    """A pose-bone rotation from a world-space rotation (3x3) about the bone's rest frame."""
+    Mr = pb.bone.matrix_local.to_3x3()
+    return (Mr.inverted() @ rot_world @ Mr).to_quaternion()
+
+
+def arm_rot(sx, out=0.0, fwd=0.0, inward=0.0):
+    """Swing an arm: `out` raises it sideways, `fwd` raises it forwards, `inward` turns it toward the middle."""
+    return (Matrix.Rotation(math.radians(-fwd), 3, 'X') @ Matrix.Rotation(math.radians(-sx * out), 3, 'Y')
+            @ Matrix.Rotation(math.radians(sx * inward), 3, 'Z'))
+
+
+def key_arm(rig, side, frame, out=0.0, fwd=0.0, inward=0.0, curl=0.0, hug=0.0, slide=0.0):
+    """Key one arm: shoulder swing, a soft bend through the lower bone, and the attachment travelling
+    round the shell (slide, in degrees; forward is positive), turning with the surface as it goes."""
+    sx = 1 if side == 'L' else -1
+    att, sh, lo = (rig.pose.bones[f'{n}.{side}'] for n in ('attach', 'shoulder', 'arm_lower'))
+    Mr = att.bone.matrix_local.to_3x3()
+    # slide: degrees around the shell; positive carries the shoulder forward along the round edge
+    att.rotation_quaternion = wq(att, Matrix.Rotation(math.radians(-sx * slide), 3, 'Z'))
+    sh.rotation_quaternion = wq(sh, arm_rot(sx, out, fwd, inward))
+    lo.rotation_quaternion = wq(lo, Matrix.Rotation(math.radians(-curl), 3, 'X') @ Matrix.Rotation(math.radians(sx * hug), 3, 'Y'))
+    for b in (att, sh, lo):
+        b.keyframe_insert('rotation_quaternion', frame=frame)
+
+
+def key_body(rig, frame, lean_x=0.0, lean_y=0.0, bob=0.0):
+    b = rig.pose.bones['body']
+    b.rotation_quaternion = wq(b, Matrix.Rotation(math.radians(lean_x), 3, 'X') @ Matrix.Rotation(math.radians(lean_y), 3, 'Y'))
+    b.location = b.bone.matrix_local.to_3x3().inverted() @ Vector((0, 0, bob))
+    b.keyframe_insert('rotation_quaternion', frame=frame); b.keyframe_insert('location', frame=frame)
+
+
+def animations(rig, arms):
+    """Wave and reach, at 24 fps, stashed as NLA strips so the GLB carries both."""
+    for pb in rig.pose.bones: pb.rotation_mode = 'QUATERNION'
+    rig.animation_data_create()
+
+    # Wave (left arm): 4 frames of anticipation, 8 to raise, three shrinking arcs, 12 to settle.
+    act = bpy.data.actions.new('wave'); rig.animation_data.action = act
+    key_arm(rig, 'L', 1); key_arm(rig, 'R', 1); key_body(rig, 1)
+    key_arm(rig, 'L', 5, out=-6, curl=-4)                                 # dip first
+    key_arm(rig, 'L', 13, out=128, fwd=20, inward=-6, curl=6, hug=-10, slide=14)    # up beside the head
+    key_body(rig, 13, lean_y=-3.5)
+    swings = [(-22, 18), (16, 11), (-11, 5), (7, 0)]                      # arc, frames apart; shrinking
+    f = 13
+    for i, (arc, _) in enumerate(swings):
+        f += 7
+        key_arm(rig, 'L', f, out=128 + arc, fwd=20, inward=-6, curl=6, hug=-10 - arc * 0.5, slide=14)
+    key_arm(rig, 'L', f + 4, out=124, fwd=18, inward=-4, curl=5, hug=-9, slide=12)
+    key_body(rig, f + 4, lean_y=-2.5)
+    key_arm(rig, 'L', f + 14, out=-3, curl=-2, slide=-3)                            # overshoot on the way down
+    key_arm(rig, 'L', f + 18); key_body(rig, f + 18)
+    key_arm(rig, 'R', 4); key_arm(rig, 'R', 16, out=5, fwd=3); key_arm(rig, 'R', f + 6, out=4, fwd=2)
+    key_arm(rig, 'R', f + 20)
+    act.use_fake_user = True
+    trk = rig.animation_data.nla_tracks.new(); trk.name = 'wave'; trk.strips.new('wave', 1, act); trk.mute = True
+
+    # Reach: slide forward, swing and bend toward the target, lean in, flatten on contact, settle, return.
+    act = bpy.data.actions.new('reach'); rig.animation_data.action = act
+    for side in 'LR': key_arm(rig, side, 1)
+    key_body(rig, 1)
+    for side, lag in (('L', 0), ('R', 2)):                              # the arms a beat apart
+        key_arm(rig, side, 6 + lag, out=-4, fwd=-8, slide=-6)
+        key_arm(rig, side, 18 + lag, out=-4, fwd=50, inward=40, curl=30, hug=32, slide=38)
+        key_arm(rig, side, 21 + lag, out=-5, fwd=53, inward=43, curl=33, hug=35, slide=41)   # overshoot
+        key_arm(rig, side, 25 + lag, out=-4, fwd=49, inward=40, curl=31, hug=33, slide=38)
+        key_arm(rig, side, 44 + lag, out=-4, fwd=49, inward=40, curl=31, hug=33, slide=38)
+        key_arm(rig, side, 56 + lag, out=-2, fwd=-3, slide=-4)
+        key_arm(rig, side, 62 + lag)
+    key_body(rig, 6, lean_x=2); key_body(rig, 20, lean_x=-6, bob=-0.01); key_body(rig, 26, lean_x=-4.5)
+    key_body(rig, 44, lean_x=-4.5); key_body(rig, 58, lean_x=1); key_body(rig, 64)
+    act.use_fake_user = True
+    trk = rig.animation_data.nla_tracks.new(); trk.name = 'reach'; trk.strips.new('reach', 1, act); trk.mute = True
+    for ob in arms:                                                       # contact squash on the shape key
+        sk = ob.data.shape_keys.key_blocks['squash']
+        for fr, v in ((1, 0), (21, 0), (25, 0.8), (44, 0.8), (50, 0), (64, 0)):
+            sk.value = v; sk.keyframe_insert('value', frame=fr)
+    rig.animation_data.action = None
+
+
+def build(pose='front', with_anims=True):
     P = POSES[pose]
     bpy.ops.wm.read_factory_settings(use_empty=True)
     M = materials()
     body = make_body(); body.data.materials.append(M['plastic'])
     legs = {s: make_leg(s) for s in 'LR'}
-    arms = {s: make_arm(s) for s in 'LR'}
+    made = {s: make_arm(s) for s in 'LR'}
+    arms = {s: m[0] for s, m in made.items()}
     for o in [*legs.values(), *arms.values()]: o.data.materials.append(M['plastic'])
     bpy.context.view_layer.update()
 
@@ -374,18 +512,25 @@ def build(pose='front'):
 
     carve(body, feats)
 
-    # Rig: bind every part rigidly to a bone.
+    # Rig. The body and its parts follow the body bone. Each arm: attach (slides along the shell)
+    # > shoulder (swings) > arm_upper > arm_lower (deform, blended weights). Legs on root.
     arm_data = bpy.data.armatures.new('Rig'); rig = bpy.data.objects.new('Rig', arm_data)
     bpy.context.collection.objects.link(rig); bpy.context.view_layer.objects.active = rig
     bpy.ops.object.mode_set(mode='EDIT')
     eb = arm_data.edit_bones
     root = eb.new('root'); root.head = (0, 0, 0); root.tail = (0, 0.4, 0)
     b = eb.new('body'); b.head = (0, 0, Z0); b.tail = (0, 0, ZT); b.parent = root
-    for s, sx in (('L', 1), ('R', -1)):
-        a = eb.new(f'arm.{s}'); a.head = (sx * (ARM['x'] - 0.12), ARM['y'], ZT - ARM['s'] * BODY_H + 0.15)
-        a.tail = (sx * ARM['x'], ARM['y'], ZT - ARM['s'] * BODY_H - 0.2); a.parent = b
-        l = eb.new(f'leg.{s}'); l.head = (sx * LEG['x'], LEG['y'], Z0 + 0.2); l.tail = (sx * LEG['x'], LEG['y'], 0); l.parent = root
+    for s_, sx in (('L', 1), ('R', -1)):
+        _, pv, d = made[s_]
+        at = eb.new(f'attach.{s_}'); at.head = Vector((0, 0, pv.z)); at.tail = Vector((pv.x, pv.y, pv.z)); at.roll = 0
+        at.parent = b; at.use_deform = False
+        sh = eb.new(f'shoulder.{s_}'); sh.head = pv; sh.tail = pv + d * 0.2; sh.parent = at; sh.use_deform = False
+        up = eb.new(f'arm_upper.{s_}'); up.head = pv; up.tail = pv + d * 0.33; up.parent = sh
+        lo = eb.new(f'arm_lower.{s_}'); lo.head = pv + d * 0.33; lo.tail = pv + d * ARM['length']; lo.parent = up
+        lo.use_connect = True
+        l = eb.new(f'leg.{s_}'); l.head = (sx * LEG['x'], LEG['y'], Z0 + 0.2); l.tail = (sx * LEG['x'], LEG['y'], 0); l.parent = root
     bpy.ops.object.mode_set(mode='OBJECT')
+    for pb in rig.pose.bones: pb.rotation_mode = 'QUATERNION'
 
     def bind(ob, bone):
         mw = ob.matrix_world.copy()
@@ -393,13 +538,25 @@ def build(pose='front'):
         ob.matrix_world = mw
     bind(body, 'body')
     for o in parts: bind(o, 'body')
-    for s in 'LR':
-        bind(arms[s], f'arm.{s}'); bind(legs[s], f'leg.{s}')
+    for s_ in 'LR':
+        bind(legs[s_], f'leg.{s_}')
+        ob = arms[s_]; ob.parent = rig; ob.parent_type = 'OBJECT'
+        md = ob.modifiers.new('Armature', 'ARMATURE'); md.object = rig
 
-    for bone, rot in P.items():
-        if bone in rig.pose.bones:
-            pb = rig.pose.bones[bone]; pb.rotation_mode = 'XYZ'
-            pb.rotation_euler = tuple(math.radians(v) for v in rot)
+    if with_anims:
+        animations(rig, list(arms.values()))
+    if 'anim' in P:
+        name, fr = P['anim']
+        rig.animation_data.action = bpy.data.actions[name]
+        bpy.context.scene.frame_set(fr)
+    if 'tilt' in P:
+        pb = rig.pose.bones['body']
+        pb.rotation_quaternion = wq(pb, Matrix.Rotation(math.radians(P['tilt'][0]), 3, 'X'))
+    if P.get('ball'):
+        bpy.context.view_layer.update()
+        tips = [rig.matrix_world @ rig.pose.bones[f'arm_lower.{s_}'].tail for s_ in 'LR']
+        c = (tips[0] + tips[1]) / 2 + Vector((0, -0.12, 0.04))
+        ball = sphere('Ball', 0.32, 0.32, 0.32, M['ball']); ball.location = c
     bpy.context.view_layer.update()
     return rig
 
@@ -455,6 +612,7 @@ def stage(yaw, elev=8.0, size=700, samples=48, dark=True, lens=100, dist=13.0, t
 if __name__ == '__main__':
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:]
     ap = argparse.ArgumentParser()
+    ap.add_argument('--frame', type=int); ap.add_argument('--anim');
     ap.add_argument('--pose', default='front'); ap.add_argument('--view', type=float, default=0)
     ap.add_argument('--elev', type=float, default=3); ap.add_argument('--lens', type=float, default=100)
     ap.add_argument('--dist', type=float, default=13); ap.add_argument('--size', type=int, default=700)
@@ -466,8 +624,19 @@ if __name__ == '__main__':
     if a.export:
         uv_unwrap()
         bpy.ops.wm.save_as_mainfile(filepath=a.export.replace('.glb', '.blend'))
-        bpy.ops.export_scene.gltf(filepath=a.export, export_format='GLB', export_apply=True, export_lights=False)
+        bpy.ops.export_scene.gltf(filepath=a.export, export_format='GLB', export_apply=False, export_lights=False,
+                                  export_animations=True, export_animation_mode='NLA_TRACKS', export_morph=True)
     if a.out:
         stage(a.view, a.elev, a.size, a.samples, dark=not a.light, lens=a.lens, dist=a.dist, target=a.target)
-        bpy.context.scene.render.filepath = a.out
-        bpy.ops.render.render(write_still=True)
+        sc = bpy.context.scene; rig = bpy.data.objects['Rig']
+        if a.anim:   # render frames of an animation: --anim wave --frame N (one) or all, every 2nd
+            rig.animation_data.action = bpy.data.actions[a.anim]
+            for ob in bpy.data.objects:
+                if ob.name.startswith('Arm.') and ob.data.shape_keys and ob.data.shape_keys.animation_data is None: pass
+            fr = [a.frame] if a.frame else range(1, int(rig.animation_data.action.frame_range[1]) + 1, 2)
+            for f_ in fr:
+                sc.frame_set(f_); sc.render.filepath = a.out.replace('#', f'{f_:03d}')
+                bpy.ops.render.render(write_still=True)
+        else:
+            sc.render.filepath = a.out
+            bpy.ops.render.render(write_still=True)
