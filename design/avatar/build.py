@@ -119,11 +119,22 @@ def smoothstep(e0, e1, x):
 
 def carve(body, feats):
     """Press sockets into the body: each feature is a 2D shape on the front (x, z) with a depth;
-    the floor is flat and the lip is a soft S-curve, like a moulded part."""
+    the floor is flat and the lip is a soft S-curve, like a moulded part. Features with a 'blink'
+    variant also give a 'blink' shape key, where the socket closes with the eye."""
     me = body.data
     n = len(me.vertices)
-    co = np.empty(n * 3); me.vertices.foreach_get('co', co); co = co.reshape(n, 3)
+    co0 = np.empty(n * 3); me.vertices.foreach_get('co', co0); co0 = co0.reshape(n, 3)
     nor = np.empty(n * 3); me.vertices.foreach_get('normal', nor); nor = nor.reshape(n, 3)
+    open_co = _carve(co0.copy(), nor, feats)
+    me.vertices.foreach_set('co', open_co.ravel()); me.update()
+    if any('blink' in f for f in feats):
+        shut = _carve(co0.copy(), nor, [f.get('blink', f) for f in feats])
+        body.shape_key_add(name='Basis'); sk = body.shape_key_add(name='blink', from_mix=False)
+        sk.data.foreach_set('co', shut.ravel())
+
+
+def _carve(co, nor, feats):
+    n = len(co)
     x, z = co[:, 0], co[:, 2]
     disp = np.zeros(n); raise_ = np.zeros(n)
     front = co[:, 1] < -0.2
@@ -170,7 +181,7 @@ def carve(body, feats):
         dd = -f['depth'] * (1 - smoothstep(-rho, rho, sdf))
         disp = np.where(front, np.minimum(disp, dd), disp)
     co += nor * (disp + raise_)[:, None]
-    me.vertices.foreach_set('co', co.ravel()); me.update()
+    return co
 
 
 def make_leg(side):
@@ -417,6 +428,7 @@ def neutral(rig, frame=1):
         pb.keyframe_insert('scale', frame=frame)
 
 
+BODY = []       # the shell, when it has a 'blink' shape key
 LIMBS = []      # arm and leg meshes, set by build(); each move gets its own shape-key action for them
 EYES = []       # eye meshes, for blinks
 
@@ -427,6 +439,10 @@ def new_action(rig, name):
         sk = ob.data.shape_keys; sk.animation_data_create()
         sk.animation_data.action = bpy.data.actions.new(f'{name}|{ob.name}')
         sk.key_blocks['squash'].value = 0; sk.key_blocks['squash'].keyframe_insert('value', frame=1)
+    for ob in BODY:
+        sk = ob.data.shape_keys; sk.animation_data_create()
+        sk.animation_data.action = bpy.data.actions.new(f'{name}|{ob.name}')
+        sk.key_blocks['blink'].value = 0; sk.key_blocks['blink'].keyframe_insert('value', frame=1)
     return act
 
 
@@ -440,6 +456,9 @@ def use_move(name):
     for ob in EYES:
         ob.animation_data_create(); ob.animation_data.action = bpy.data.actions.get(f'{name}|{ob.name}')
         if ob.animation_data.action is None: ob.scale = (1, 1, 1)
+    for ob in BODY:
+        sk = ob.data.shape_keys; sk.animation_data.action = bpy.data.actions.get(f'{name}|{ob.name}')
+        if sk.animation_data.action is None: sk.key_blocks['blink'].value = 0
 
 
 def heel_toe(tilt):
@@ -664,6 +683,9 @@ def start_stop_turn(rig, legs, S=0.58):
           hips_track=[(1, (0, 0, 0)), (8, (0, 0, -6)), (15, (0, 1, 3)), (20, (0, 0, -6)), (27, (0, 0, 2)), (36, (0, 0, 0))])
 
 
+BLINK = ((1, 1), (71, 1), (73, 0.08), (74, 0.08), (78, 1), (97, 1))   # frame, eye height
+
+
 def idle(rig):
     """A 96-frame (4 s) idle loop that begins and ends at rest, so any move can start from it.
     Breathing (two slow breaths, a hint of stretch on the in-breath), a small weight shift from foot
@@ -689,9 +711,14 @@ def idle(rig):
             key_arm(rig, s_, f, out=1.5 + 1.2 * math.sin(2 * math.pi * 2 * (t - 0.03)), fwd=1.5 * sx * drag)
     for ob in EYES:                                                  # one blink: close in 2, open in 4
         ob.animation_data_create(); ob.animation_data.action = bpy.data.actions.new(f'idle|{ob.name}')
-        for f, k in ((1, 1), (71, 1), (73, 0.08), (74, 0.08), (78, 1), (97, 1)):
+        for f, k in BLINK:
             ob.scale = (1, k, 1); ob.keyframe_insert('scale', frame=f)
         ob.animation_data.action = None; ob.scale = (1, 1, 1)
+    for ob in BODY:                                                  # the sockets close with the eyes
+        sk = ob.data.shape_keys.key_blocks['blink']
+        for f, k in BLINK:
+            sk.value = (1 - k) / 0.92; sk.keyframe_insert('value', frame=f)
+        sk.value = 0
     stash(rig, act, 'idle')
 
 
@@ -807,8 +834,11 @@ def build(pose='front', with_anims=True):
             D = 0.016
             loc, nor = surface(body, sx * F['eye_x'], eye_s)
             # A pill (racetrack): straight sides, round ends, domed face; its pocket is the same pill.
+            hb = eh * 0.08                                           # the closed eye's height
             feats.append(dict(kind='slot', frame=frame(loc, nor, spin=math.pi / 2), half=(eh - ew) / 2,
-                              r=ew / 2 + 0.0035, depth=D, rho=0.0035))
+                              r=ew / 2 + 0.0035, depth=D, rho=0.0035,
+                              blink=dict(kind='slot', frame=frame(loc, nor), half=(ew - hb) / 2,
+                                         r=hb / 2 + 0.0035, depth=D, rho=0.0035)))
             e = capsule('Eye', ew, eh, ew * 0.52, segs=64); e.data.materials.append(M['gloss']); parts.append(e)
             orient(e, loc, nor, lift=-D - 0.003)
     if face == 'smile':
@@ -895,6 +925,7 @@ def build(pose='front', with_anims=True):
         md = ob.modifiers.new('Armature', 'ARMATURE'); md.object = rig
 
     LIMBS[:] = list(arms.values()) + list(legs.values())
+    BODY[:] = [body] if body.data.shape_keys else []
     EYES[:] = [o for o in parts if o.name.startswith('Eye') and not o.name.startswith(('EyeL', 'EyeP'))]
     if with_anims:
         animations(rig, list(arms.values()), legs)
