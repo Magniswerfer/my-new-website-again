@@ -376,6 +376,13 @@ def materials():
     return dict(ball=ball, housing=housing, pocket=pocket, shine=shine, plastic=plastic, gloss=gloss, ink=ink, led=led, ledoff=ledoff, keycap=keycap, slot=slot)
 
 
+FACES = {   # name: ((his left eye, his right eye), mouth)
+    'smile': (('open', 'open'), 'smile'), 'happy': (('happy', 'happy'), 'smile'),
+    'content': (('content', 'content'), 'smile'), 'sip': (('content', 'content'), 'o'),
+    'wink': (('open', 'happy'), 'smile'), 'muse': (('open', 'open'), 'o'), 'shout': (('happy', 'happy'), 'shout'),
+    'surprised': (('open', 'open'), 'shout'), 'closed': (('content', 'content'), 'smile'), 'o': (('open', 'open'), 'o'),
+}
+
 POSES = {
     # face: smile | closed | o ; led on/off ; anim: (action, frame) to pose from
     'front': {}, 'rest': {},
@@ -385,7 +392,14 @@ POSES = {
     'sit': {'sit': True},
     'walk': {'anim': ('walk', 8)},
     'jump': {'anim': ('jump', 7)},
-    'surprised': {'face': 'o'},
+    'surprised': {'face': 'surprised'},
+    'face_smile': {'face': 'smile'},
+    'face_happy': {'face': 'happy'},
+    'face_content': {'face': 'content'},
+    'face_sip': {'face': 'sip'},
+    'face_wink': {'face': 'wink'},
+    'face_muse': {'face': 'muse'},
+    'face_shout': {'face': 'shout'},
 }
 
 FPS = 24
@@ -830,40 +844,46 @@ def build(pose='front', with_anims=True):
             e = sphere(name + 'End', r, r, r, mat, segs=32); e.location = q
         feats.append(dict(kind='poly3', pts=line, r=r + 0.0035, depth=0.012, rho=0.003))
 
-    eye_s = F['eye_s'] - (0.02 if face == 'o' else 0)
-    if face == 'closed':
-        for sx in (-1, 1):
-            T = 1.1
-            pts = [(sx * F['eye_x'] + 0.085 * math.sin(t) / math.sin(T),
-                    eye_s + 0.02 + 0.045 * (math.cos(t) - math.cos(T)) / (1 - math.cos(T))) for t in np.linspace(-T, T, 28)]
-            bar('Lid', pts, 0.02, -0.014, M['gloss'])
-    else:
-        big = 1.12 if face == 'o' else 1.0
-        ew, eh = F['eye_w'] * big, F['eye_h'] * big
-        for sx in (-1, 1):
-            # A pocket a little larger than the eye; the eye is a shallow convex lens inside it.
-            # Inset and domed: a shallow, crisp-edged socket a hair wider than the eye; the eye's
-            # widest outline sits on the socket floor, so the rim reads as set in, and its crown rises
-            # clearly above the shell to catch a highlight.
+    # Expressions. Eyes per side: open (glossy pill in its socket), happy (an upward arc, like a
+    # beaming squint), content (a downward arc, eyes softly shut), shut (a straight bar, the blink's end
+    # pose). Every closed eye is a round-ended bar exactly as thick as the mouth, set in a matching
+    # groove. Mouths: smile, o (small, sipping or musing), shout (a big open oval: cheering, surprise).
+    eyes = FACES[face][0]; mouth = FACES[face][1]
+    eye_s = F['eye_s']; ew, eh = F['eye_w'], F['eye_h']; R_ = F['smile_r']
+    for sx, kind in ((1, eyes[0]), (-1, eyes[1])):            # (his left, his right)
+        cx = sx * F['eye_x']
+        if kind == 'open':
             D = 0.016
-            loc, nor = surface(body, sx * F['eye_x'], eye_s)
-            # A pill (racetrack): straight sides, round ends, domed face; its pocket is the same pill.
-            hb = 2 * F['smile_r']                                    # closed: as thick as the mouth
+            loc, nor = surface(body, cx, eye_s)
+            hb = 2 * R_
             feats.append(dict(kind='slot', frame=frame(loc, nor, spin=math.pi / 2), half=(eh - ew) / 2,
                               r=ew / 2 + 0.0035, depth=D, rho=0.0035,
                               blink=dict(kind='slot', frame=frame(loc, nor), half=(ew - hb) / 2,
                                          r=hb / 2 + 0.0035, depth=D, rho=0.0035)))
-            e = eye_mesh(ew, eh, ew * 0.52, F['smile_r']); e.data.materials.append(M['gloss']); parts.append(e)
+            e = eye_mesh(ew, eh, ew * 0.52, R_); e.data.materials.append(M['gloss']); parts.append(e)
             orient(e, loc, nor, lift=-D - 0.003)
-    if face == 'smile':
+        else:
+            half_w, rise = ew * 0.62, {'happy': -0.055, 'content': 0.045, 'shut': 0.0}[kind]
+            T = 1.15
+            pts = [(cx + half_w * math.sin(t) / math.sin(T),
+                    eye_s + 0.01 + rise * (math.cos(t) - math.cos(T)) / (1 - math.cos(T))) for t in np.linspace(-T, T, 32)]
+            bar('Lid', pts, R_, -0.014, M['gloss'])
+    if mouth == 'smile':
         T = 1.2
         pts = [(F['smile_w'] * math.sin(t) / math.sin(T),
                 F['smile_bot'] - (F['smile_bot'] - F['smile_end']) * (1 - math.cos(t)) / (1 - math.cos(T))) for t in np.linspace(-T, T, 44)]
-        bar('Smile', pts, F['smile_r'], -0.014, M['gloss'])
-    elif face == 'o':
-        loc, nor = surface(body, 0, 0.365)
-        feats.append(dict(kind='circle', frame=frame(loc, nor), r=0.04, depth=0.014))
-        m = sphere('Mouth', 0.035, 0.045, 0.03, M['gloss']); orient(m, loc, nor, lift=-0.017)
+        bar('Smile', pts, R_, -0.014, M['gloss'])
+    else:
+        w_, h_ = (0.074, 0.084) if mouth == 'o' else (0.15, 0.19)
+        loc, nor = surface(body, 0, F['smile_end'] + 0.012)
+        feats.append(dict(kind='slot', frame=frame(loc, nor, spin=math.pi / 2), half=(h_ - w_) / 2,
+                          r=w_ / 2 + 0.0035, depth=0.016 if mouth == 'o' else 0.03, rho=0.0035))
+        if mouth == 'o':                                    # a small glossy bead, like the eyes
+            m = capsule('Mouth', w_, h_, w_ * 0.6); m.data.materials.append(M['gloss']); parts.append(m)
+            orient(m, loc, nor, lift=-0.019)
+        else:                                               # a dark recessed opening
+            m = capsule('Mouth', w_, h_, 0.012, flat=0.4); m.data.materials.append(M['ink']); parts.append(m)
+            orient(m, loc, nor, lift=-0.028)
 
     led_on = P.get('led', True)
     loc, nor = surface(body, F['led_x'], F['led_s'])
