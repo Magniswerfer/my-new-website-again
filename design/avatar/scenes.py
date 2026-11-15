@@ -392,7 +392,7 @@ def scene_photos(rig, M):
     """Camera up to his face, a click (a little nudge), down to check the shot, up again."""
     act = B.new_action(rig, 'photos')
     UP = dict(fwd=78, inward=58, curl=30, hug=24, slide=36)
-    DOWN = dict(fwd=48, inward=48, curl=30, hug=24, slide=34)
+    DOWN = dict(fwd=56, inward=50, curl=32, hug=26, slide=34)
     for side, lag in (('L', 0), ('R', 1)):
         for f, p in ((1, UP), (36 + lag, UP), (40 + lag, {**UP, 'fwd': 74}), (44 + lag, UP), (58 + lag, UP),
                      (70 + lag, DOWN), (82 + lag, DOWN), (N + 1, UP)):
@@ -403,7 +403,14 @@ def scene_photos(rig, M):
     B.stash(rig, act, 'photos')
     B.use_move('photos'); bpy.context.scene.frame_set(1)
     cam = camera(M); cam.scale = (1.9, 1.9, 1.9); cam.location = both_tips(rig) + Vector((0, -0.3, 0.04))
-    bind_to(rig, cam, 'arm_lower.L')
+    # Held at his face, but carried by the body (not a mitten), so lowering it can't tip it over:
+    # it moves down to his chest and tilts its back up toward him to check the shot.
+    bind_to(rig, cam, 'body')
+    obj_action(cam, 'photos'); z0 = cam.location.z; y0 = cam.location.y
+    for f, dz, dy, rx in ((1, 0, 0, 0), (38, 0, 0, 0), (40, 0, 0.02, 0), (44, 0, 0, 0), (60, 0, 0, 0),
+                          (70, -0.3, 0.06, 28), (82, -0.3, 0.06, 28), (N + 1, 0, 0, 0)):
+        cam.location.z = z0 + dz; cam.location.y = y0 + dy; cam.rotation_euler = (math.radians(rx), 0, 0)
+        cam.keyframe_insert('location', frame=f); cam.keyframe_insert('rotation_euler', frame=f)
     return [cam]
 
 
