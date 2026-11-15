@@ -293,6 +293,26 @@ def orient(ob, loc, nor, lift=0.0, spin=0.0):
     ob.matrix_world = m
 
 
+def eye_mesh(w, h, d, r):
+    """An upright pill w x h, d deep, with a 'closed' shape key: a horizontal bar w long and 2r thick
+    (the mouth's thickness), round-ended. Both shapes come from the same sphere, so the morph is clean."""
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=64, ring_count=48, radius=1)
+    ob = bpy.context.object; ob.name = 'Eye'
+    sph = [v.co.copy() for v in ob.data.vertices]
+    def pill(p, long_y, w_, h_, d_):
+        x, y, z = p
+        if long_y:
+            half = max(0.0, (h_ - w_) / 2)
+            return Vector((x * w_ / 2, y * w_ / 2 + math.copysign(half, y) * (y != 0), z * d_ / 2))
+        half = max(0.0, (w_ - h_) / 2)
+        return Vector((x * h_ / 2 + math.copysign(half, x) * (x != 0), y * h_ / 2, z * d_ / 2))
+    for v, p in zip(ob.data.vertices, sph): v.co = pill(p, True, w, h, d)
+    for pg in ob.data.polygons: pg.use_smooth = True
+    ob.shape_key_add(name='Basis'); k = ob.shape_key_add(name='closed', from_mix=False)
+    for i, p in enumerate(sph): k.data[i].co = pill(p, False, w, 2 * r, 2 * r)
+    return ob
+
+
 def frame(loc, nor, spin=0.0):
     """The same axes orient() gives a part: x and y along the surface, z out of it."""
     z = nor.normalized(); x = Vector((0, 0, 1)).cross(z).normalized(); y = z.cross(x)
@@ -439,10 +459,10 @@ def new_action(rig, name):
         sk = ob.data.shape_keys; sk.animation_data_create()
         sk.animation_data.action = bpy.data.actions.new(f'{name}|{ob.name}')
         sk.key_blocks['squash'].value = 0; sk.key_blocks['squash'].keyframe_insert('value', frame=1)
-    for ob in BODY:
+    for ob, kn in [(o, 'blink') for o in BODY] + [(o, 'closed') for o in EYES]:
         sk = ob.data.shape_keys; sk.animation_data_create()
         sk.animation_data.action = bpy.data.actions.new(f'{name}|{ob.name}')
-        sk.key_blocks['blink'].value = 0; sk.key_blocks['blink'].keyframe_insert('value', frame=1)
+        sk.key_blocks[kn].value = 0; sk.key_blocks[kn].keyframe_insert('value', frame=1)
     return act
 
 
@@ -453,12 +473,10 @@ def use_move(name):
         sk = ob.data.shape_keys; sk.animation_data_create()
         sk.animation_data.action = bpy.data.actions.get(f'{name}|{ob.name}')
         if sk.animation_data.action is None: sk.key_blocks['squash'].value = 0
-    for ob in EYES:
-        ob.animation_data_create(); ob.animation_data.action = bpy.data.actions.get(f'{name}|{ob.name}')
-        if ob.animation_data.action is None: ob.scale = (1, 1, 1)
-    for ob in BODY:
-        sk = ob.data.shape_keys; sk.animation_data.action = bpy.data.actions.get(f'{name}|{ob.name}')
-        if sk.animation_data.action is None: sk.key_blocks['blink'].value = 0
+    for ob, kn in [(o, 'blink') for o in BODY] + [(o, 'closed') for o in EYES]:
+        sk = ob.data.shape_keys; sk.animation_data_create()
+        sk.animation_data.action = bpy.data.actions.get(f'{name}|{ob.name}')
+        if sk.animation_data.action is None: sk.key_blocks[kn].value = 0
 
 
 def heel_toe(tilt):
@@ -683,7 +701,7 @@ def start_stop_turn(rig, legs, S=0.58):
           hips_track=[(1, (0, 0, 0)), (8, (0, 0, -6)), (15, (0, 1, 3)), (20, (0, 0, -6)), (27, (0, 0, 2)), (36, (0, 0, 0))])
 
 
-BLINK = ((1, 1), (71, 1), (73, 0.08), (74, 0.08), (78, 1), (97, 1))   # frame, eye height
+BLINK = ((1, 0), (71, 0), (73, 1), (74, 1), (78, 0), (97, 0))   # frame, how closed
 
 
 def idle(rig):
@@ -709,15 +727,11 @@ def idle(rig):
         drag = math.sin(2 * math.pi * (t - 0.04))                    # arms a beat behind the shift
         for s_, sx in (('L', 1), ('R', -1)):
             key_arm(rig, s_, f, out=1.5 + 1.2 * math.sin(2 * math.pi * 2 * (t - 0.03)), fwd=1.5 * sx * drag)
-    for ob in EYES:                                                  # one blink: close in 2, open in 4
-        ob.animation_data_create(); ob.animation_data.action = bpy.data.actions.new(f'idle|{ob.name}')
-        for f, k in BLINK:
-            ob.scale = (1, k, 1); ob.keyframe_insert('scale', frame=f)
-        ob.animation_data.action = None; ob.scale = (1, 1, 1)
-    for ob in BODY:                                                  # the sockets close with the eyes
-        sk = ob.data.shape_keys.key_blocks['blink']
-        for f, k in BLINK:
-            sk.value = (1 - k) / 0.92; sk.keyframe_insert('value', frame=f)
+    # One blink, close in 2 frames and open in 4; the sockets close with the eyes.
+    for ob, kn in [(o, 'closed') for o in EYES] + [(o, 'blink') for o in BODY]:
+        sk = ob.data.shape_keys.key_blocks[kn]
+        for f, c in BLINK:
+            sk.value = c; sk.keyframe_insert('value', frame=f)
         sk.value = 0
     stash(rig, act, 'idle')
 
@@ -834,12 +848,12 @@ def build(pose='front', with_anims=True):
             D = 0.016
             loc, nor = surface(body, sx * F['eye_x'], eye_s)
             # A pill (racetrack): straight sides, round ends, domed face; its pocket is the same pill.
-            hb = eh * 0.08                                           # the closed eye's height
+            hb = 2 * F['smile_r']                                    # closed: as thick as the mouth
             feats.append(dict(kind='slot', frame=frame(loc, nor, spin=math.pi / 2), half=(eh - ew) / 2,
                               r=ew / 2 + 0.0035, depth=D, rho=0.0035,
                               blink=dict(kind='slot', frame=frame(loc, nor), half=(ew - hb) / 2,
                                          r=hb / 2 + 0.0035, depth=D, rho=0.0035)))
-            e = capsule('Eye', ew, eh, ew * 0.52, segs=64); e.data.materials.append(M['gloss']); parts.append(e)
+            e = eye_mesh(ew, eh, ew * 0.52, F['smile_r']); e.data.materials.append(M['gloss']); parts.append(e)
             orient(e, loc, nor, lift=-D - 0.003)
     if face == 'smile':
         T = 1.2
