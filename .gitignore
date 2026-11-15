@@ -7,3 +7,6 @@ dist/
 .env.*
 !.env.example
 .DS_Store
+
+# Python bytecode (design/avatar scripts)
+__pycache__/
