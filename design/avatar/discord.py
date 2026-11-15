@@ -32,8 +32,11 @@ crop = (int(cx - side / 2), int(cy - side / 2), int(cx + side / 2), int(cy + sid
 frames = []
 for f in files:
     im = Image.open(f).convert('RGBA')
-    bg = Image.new('RGBA', im.size, BG + (255,)); bg.alpha_composite(im)
-    frames.append(bg.crop(crop).resize((S, S), Image.LANCZOS).convert('RGB'))
+    # The square can reach past the render's edges: lay the frame on a page-coloured canvas first.
+    pad = int(side)
+    bg = Image.new('RGBA', (im.width + 2 * pad, im.height + 2 * pad), BG + (255,)); bg.alpha_composite(im, (pad, pad))
+    c = (crop[0] + pad, crop[1] + pad, crop[2] + pad, crop[3] + pad)
+    frames.append(bg.crop(c).resize((S, S), Image.LANCZOS).convert('RGB'))
 
 frames[0].save(out / 'magnus-discord.png', optimize=True)
 # One shared palette for all frames, so colours don't shimmer from frame to frame.
