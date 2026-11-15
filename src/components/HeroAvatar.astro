@@ -1,10 +1,16 @@
 ---
 /**
  * The character on the homepage, rendered in Blender (design/avatar/build.py) and played back
- * frame by frame on a canvas: an idle loop, a wave on arrival and when pointed at, and a sleeping
- * pose while the site's motion is stopped. Frames live in sprite sheets made by
- * design/avatar/sheets.py; meta.json gives each move's frame size, count and frame rate.
- * People who prefer reduced motion get a still frame.
+ * frame by frame on a canvas.
+ *
+ * First visit in a session: he walks in from the right, turns to the viewer and waves. After that:
+ * he is already standing there and waves on arrival. In between: an idle loop, and a wave when
+ * pointed at. While the site's motion is stopped: the sleep pose. Reduced motion: a still frame.
+ *
+ * Frames live in sprite sheets made by design/avatar/sheets.py. meta.json gives each move's frame
+ * size, count and rate; the walk-in also gives each frame's offset, so the frames stay small while
+ * he crosses the screen. The canvas reaches past the box to the right (and a little above and below)
+ * to make room for the walk.
  */
 import meta from '../../public/avatar/meta.json';
 interface Props { label: string; class?: string }
@@ -18,22 +24,36 @@ const base = '/avatar/';
   <img class="sleep" src={`${base}sleep.webp`} alt="" aria-hidden="true" loading="lazy" decoding="async" />
   <canvas aria-hidden="true"></canvas>
 </div>
+<script is:inline>
+  // Decide before the first paint whether he'll walk in, so he isn't briefly standing there first.
+  (function () {
+    var el = document.currentScript && document.currentScript.previousElementSibling;
+    try {
+      if (el && !sessionStorage.getItem('mhk:walked') && localStorage.getItem('mhk:motion') !== 'off'
+        && !matchMedia('(prefers-reduced-motion: reduce)').matches) el.setAttribute('data-walkin', '');
+    } catch (e) {}
+  })();
+</script>
 
 <style>
   .hero-av { position: relative; aspect-ratio: var(--av-ratio, 1); cursor: pointer; user-select: none; -webkit-user-select: none; }
-  .hero-av > * { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .still, .sleep { object-fit: contain; pointer-events: none; transition: opacity 0.35s ease; }
-  canvas { opacity: 0; transition: opacity 0.25s ease; }
+  .still, .sleep { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; transition: opacity 0.35s ease; }
+  /* The canvas: the box, plus room to the right for the walk, and a little above and below. */
+  canvas {
+    position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;   /* resized in JS */
+    opacity: 0; transition: opacity 0.25s ease;
+  }
   .hero-av[data-ready] canvas { opacity: 1; }
-  .hero-av[data-ready] .still { opacity: 0; }
+  .hero-av[data-ready] .still, .hero-av[data-walkin] .still { opacity: 0; }
   .sleep { opacity: 0; }
   .hero-av[data-asleep] .sleep { opacity: 1; }
   .hero-av[data-asleep] canvas, .hero-av[data-asleep] .still { opacity: 0; }
 </style>
 
 <script>
-  type Move = { sheet: string; w: number; h: number; cols: number; frames: number; fps: number };
-  type Meta = { ratio: number; idle: Move; wave: Move };
+  type Move = { sheet: string; w: number; h: number; cols: number; frames: number; fps: number; dx?: number[]; dy?: number[] };
+  type Name = 'idle' | 'wave' | 'walkin';
+  type Meta = { ratio: number } & Record<Name, Move>;
   type Box = HTMLElement & { _stop?: () => void };
 
   const motionOn = () => { try { return localStorage.getItem('mhk:motion') !== 'off'; } catch { return true; } };
@@ -50,39 +70,54 @@ const base = '/avatar/';
     asleep();
     const onMotion = () => asleep();
     document.addEventListener('mhk:motion', onMotion);
-    if (reduce) { box._stop = () => document.removeEventListener('mhk:motion', onMotion); return; }
+    if (reduce) { box.removeAttribute('data-walkin'); box._stop = () => document.removeEventListener('mhk:motion', onMotion); return; }
 
-    // The idle comes first; the wave loads behind it and is only played once it has arrived.
-    const idle = await load(base + meta.idle.sheet);
+    // Room around the box for the walk (as shares of the box), from the walk-in's offsets.
+    const wi = meta.walkin;
+    const ext = wi?.dx ? {
+      r: Math.max(0, ...wi.dx) / wi.w, t: Math.max(0, ...wi.dy!.map((d) => -d)) / wi.h, b: Math.max(0, ...wi.dy!) / wi.h,
+    } : { r: 0, t: 0, b: 0 };
     const canvas = box.querySelector('canvas')!;
     const ctx = canvas.getContext('2d')!;
-    const sheets: Record<'idle' | 'wave', { m: Move; im: HTMLImageElement | null }> = { idle: { m: meta.idle, im: idle }, wave: { m: meta.wave, im: null } };
-    let wantWave = false;
-    load(base + meta.wave.sheet).then((im) => { sheets.wave.im = im; if (wantWave) waveQueued = true; }).catch(() => {});
-
+    let boxW = 0, boxH = 0;
     const fit = () => {
-      const r = canvas.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
-      canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+      const r = box.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+      boxW = r.width * dpr; boxH = r.height * dpr;
+      canvas.style.width = `${r.width * (1 + ext.r)}px`; canvas.style.height = `${r.height * (1 + ext.t + ext.b)}px`;
+      canvas.style.top = `${-r.height * ext.t}px`;
+      canvas.width = Math.round(boxW * (1 + ext.r)); canvas.height = Math.round(boxH * (1 + ext.t + ext.b));
     };
     fit();
-    const ro = new ResizeObserver(fit); ro.observe(canvas);
+    const ro = new ResizeObserver(fit); ro.observe(box);
 
-    // Which move is playing, from when; the previous frame cross-fades out over a few frames so a
-    // wave can start from anywhere in the idle loop without a jump.
-    let move: 'idle' | 'wave' = 'idle', t0 = performance.now(), fadeFrom: { k: 'idle' | 'wave'; f: number } | null = null, fadeT = 0;
-    let visible = true, raf = 0, waveQueued = false;
-
-    const draw = (k: 'idle' | 'wave', f: number, alpha = 1) => {
-      const { m, im } = sheets[k];
-      const sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h;
-      ctx.globalAlpha = alpha;
-      if (im) ctx.drawImage(im, sx, sy, m.w, m.h, 0, 0, canvas.width, canvas.height);
+    let walkIn = box.hasAttribute('data-walkin') && !!wi;
+    const sheets: Record<Name, { m: Move; im: HTMLImageElement | null }> = {
+      idle: { m: meta.idle, im: null }, wave: { m: meta.wave, im: null }, walkin: { m: wi, im: null },
     };
-    const frameOf = (k: 'idle' | 'wave', now: number) => {
+    // Load what's needed first: the walk-in on a first visit, otherwise the idle; then the rest.
+    const first: Name = walkIn ? 'walkin' : 'idle';
+    try { sheets[first].im = await load(base + sheets[first].m.sheet); } catch { walkIn = false; box.removeAttribute('data-walkin'); }
+    if (!sheets.idle.im) sheets.idle.im = await load(base + meta.idle.sheet).catch(() => null);
+    let wantWave = false, waveQueued = false;
+    load(base + meta.wave.sheet).then((im) => { sheets.wave.im = im; if (wantWave) waveQueued = true; }).catch(() => {});
+
+    let move: Name = walkIn ? 'walkin' : 'idle', t0 = performance.now();
+    let fadeFrom: { k: Name; f: number } | null = null, fadeT = 0, visible = true, raf = 0;
+
+    const draw = (k: Name, f: number, alpha = 1) => {
+      const { m, im } = sheets[k];
+      if (!im) return;
+      const sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h;
+      const x = m.dx ? (m.dx[f] / m.w) * boxW : 0;
+      const y = boxH * ext.t + (m.dy ? (m.dy[f] / m.h) * boxH : 0);
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(im, sx, sy, m.w, m.h, x, y, boxW, boxH);
+    };
+    const frameOf = (k: Name, now: number) => {
       const m = sheets[k].m; const f = Math.floor(((now - t0) / 1000) * m.fps);
       return k === 'idle' ? f % m.frames : f;
     };
-    const play = (k: 'idle' | 'wave', now: number) => {
+    const play = (k: Name, now: number) => {
       fadeFrom = { k: move, f: Math.min(frameOf(move, now), sheets[move].m.frames - 1) }; fadeT = now;
       move = k; t0 = now;
     };
@@ -90,8 +125,15 @@ const base = '/avatar/';
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
       if (!visible || box.hasAttribute('data-asleep')) return;
-      if (waveQueued) { waveQueued = false; play('wave', now); }
+      if (waveQueued && move !== 'walkin') { waveQueued = false; play('wave', now); }
       let f = frameOf(move, now);
+      if (move === 'walkin' && f >= sheets.walkin.m.frames) {
+        // Arrived: say hello, then idle. Only walk in once per visit to the site.
+        try { sessionStorage.setItem('mhk:walked', '1'); } catch {}
+        box.removeAttribute('data-walkin');
+        if (sheets.wave.im) { move = 'wave'; } else { move = 'idle'; wantWave = true; }
+        t0 = now; f = 0; fadeFrom = null;
+      }
       if (move === 'wave' && f >= sheets.wave.m.frames) { play('idle', now); f = 0; }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       draw(move, f);
@@ -105,12 +147,12 @@ const base = '/avatar/';
     raf = requestAnimationFrame(tick);
 
     const hello = () => {
-      if (!motionOn() || move === 'wave') return;
+      if (!motionOn() || move === 'wave' || move === 'walkin') return;
       if (sheets.wave.im) waveQueued = true; else wantWave = true;
     };
     box.addEventListener('pointerenter', hello);
     box.addEventListener('click', hello);
-    const greet = window.setTimeout(hello, 900);             // say hello once on arrival
+    const greet = walkIn ? 0 : window.setTimeout(hello, 900);    // already here: say hello once
     const io = new IntersectionObserver((e) => (visible = e[0].isIntersecting)); io.observe(box);
 
     box._stop = () => {

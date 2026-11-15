@@ -750,6 +750,74 @@ def idle(rig):
     stash(rig, act, 'idle')
 
 
+def walk_in(rig, legs, view=-18.0, D=3.0, F=12, swing=8, toward=24.0):
+    """Walk in from the right of the frame toward the page's text, a last short step, turn to face the
+    viewer (the head leads), and end exactly at rest so the idle can follow.
+    `view` is the rig's turn in the hero render; the path is laid out so it runs straight across the
+    screen (world -x) from D units to the right."""
+    A = 0.025 * BODY_H
+    a = math.radians(view)
+    # Screen-left and a little toward the camera, so he walks in three-quarter to the viewer.
+    w = Vector((-math.cos(math.radians(toward)), -math.sin(math.radians(toward)), 0))
+    travel = Matrix.Rotation(-a, 3, 'Z') @ w
+    yaw = math.degrees(math.atan2(-travel.x, travel.y)) + 180    # facing along the travel
+    yaw = (yaw + 180) % 360 - 180
+    start = -travel * D
+    n = int(round(D / 0.5))                                      # steps of about 0.5
+    t_walk = 1 + n * F                                           # last walking step lands here
+    def root_at(f):
+        u = min(1.0, max(0.0, (f - 1) / (t_walk - 1)))
+        u = u * u * (3 - 2 * u) if False else u                  # constant pace; the steps carry the ease
+        return start + (Vector((0, 0, 0)) - start) * u
+    feet = {'L': [], 'R': []}
+    side = ['L', 'R']
+    # Both feet start planted at rest around the start point.
+    for s_ in 'LR':
+        x, y = foot_rest(s_, yaw, (start.x, start.y)); feet[s_].append((1, (x, y, yaw, 0, 0)))
+    last = {s_: feet[s_][0][1] for s_ in 'LR'}
+    shell = [(1, (0, 0, 0, 2))]
+    arms = {'L': [(1, 0)], 'R': [(1, 0)]}
+    for k in range(n):
+        s_ = side[k % 2]; land = 1 + (k + 1) * F; lift = land - swing
+        if k == n - 1:
+            tgt = foot_rest(s_, yaw, (0, 0))                     # the last step lands at rest
+        else:
+            r = root_at(land) + travel * 0.25
+            tgt = foot_rest(s_, yaw, (r.x, r.y))
+        lx, ly = last[s_][0], last[s_][1]
+        feet[s_] += [(lift, (lx, ly, yaw, 0, 10)), (lift + swing // 2, ((lx + tgt[0]) / 2, (ly + tgt[1]) / 2, yaw, 0.1, 2)),
+                     (land, (tgt[0], tgt[1], yaw, 0, -6)), (land + 2, (tgt[0], tgt[1], yaw, 0, 0))]
+        last[s_] = (tgt[0], tgt[1])
+        sup = 1 if s_ == 'L' else -1                              # weight moves onto the landing foot
+        shell += [(land - 3, (0.0, 0.3 * A, -1.5 * sup, 4)), (land + 2, (0.03 * sup, -0.5 * A, 2.5 * sup, 4))]
+        arms[s_] += [(land, -12)]; arms['L' if s_ == 'R' else 'R'] += [(land, 12)]
+    # The trailing foot closes in beside the other.
+    o = side[n % 2]; tgt = foot_rest(o, yaw, (0, 0)); lx, ly = last[o]; t = t_walk
+    feet[o] += [(t + 1, (lx, ly, yaw, 0, 8)), (t + 5, ((lx + tgt[0]) / 2, (ly + tgt[1]) / 2, yaw, 0.06, 0)),
+                (t + 9, (tgt[0], tgt[1], yaw, 0, 0))]
+    shell += [(t + 4, (0, 0.2 * A, 0, 2)), (t + 10, (0, -0.6 * A, 0, 1)), (t + 15, (0, 0.1 * A, 0, 0))]
+    arms['L'] += [(t + 6, 3), (t + 12, -1), (t + 16, 0)]; arms['R'] += [(t + 6, -3), (t + 12, 1), (t + 16, 0)]
+    # Turn to face the viewer: the head looks first, then two small steps bring the body round.
+    t = t + 14
+    mid = yaw / 2
+    for s_, t_land, y_ in (('R', t + 8, mid), ('L', t + 14, 0.0), ('R', t + 20, 0.0)):
+        x0, y0 = feet[s_][-1][1][:2]; x1, y1 = foot_rest(s_, y_, (0, 0))
+        feet[s_] += [(t_land - 5, (x0, y0, feet[s_][-1][1][2], 0, 6)), (t_land - 2, ((x0 + x1) / 2, (y0 + y1) / 2, y_, 0.06, 0)),
+                     (t_land, (x1, y1, y_, 0, 0))]
+    end = t + 30
+    for s_ in 'LR':
+        feet[s_].append((end, (*foot_rest(s_, 0, (0, 0)), 0, 0, 0)))
+    shell += [(t + 8, (-0.02, -0.3 * A, -1.5, 0)), (t + 14, (0.02, -0.4 * A, 1.5, 0)), (t + 21, (0, -0.2 * A, 0, 0)), (end, (0, 0, 0, 0))]
+    arms['L'] += [(end, 0)]; arms['R'] += [(end, 0)]
+    root = [(1, (start.x, start.y, yaw)), (t_walk, (0, 0, yaw)), (t + 3, (0, 0, yaw)), (t + 9, (0, 0, mid)),
+            (t + 17, (0, 0, -4)), (t + 22, (0, 0, 0)), (end, (0, 0, 0))]
+    # Root travels at constant pace while walking.
+    root = [(f, (*root_at(f)[:2], yaw)) for f in range(1, t_walk + 1, 2)] + root[2:]
+    head = [(1, (0, 0, 0)), (t_walk - 10, (0, 0, 0)), (t - 4, (1, 0, -0.55 * yaw)), (t + 6, (0, 2, -0.35 * yaw)),
+            (t + 16, (0, 1, 4)), (t + 22, (0, 0, -1.5)), (end, (0, 0, 0))]
+    steps(rig, legs, 'walk_in', end, root=root, feet=feet, shell=shell, arms=arms, head_track=head)
+
+
 def animations(rig, arms, legs=None):
     """Wave and reach, at 24 fps, stashed as NLA strips so the GLB carries both."""
     for pb in rig.pose.bones: pb.rotation_mode = 'QUATERNION'
@@ -798,7 +866,7 @@ def animations(rig, arms, legs=None):
         for fr, v in ((1, 0), (21, 0), (25, 0.8), (44, 0.8), (50, 0), (64, 0)):
             sk.value = v; sk.keyframe_insert('value', frame=fr)
     if legs:
-        walk(rig, legs); jump(rig, legs); start_stop_turn(rig, legs); idle(rig)
+        walk(rig, legs); jump(rig, legs); start_stop_turn(rig, legs); idle(rig); walk_in(rig, legs)
     for pb in rig.pose.bones:                         # back to rest once the moves are built
         pb.location = (0, 0, 0); pb.rotation_quaternion = (1, 0, 0, 0); pb.scale = (1, 1, 1)
     for ob in arms + (list(legs.values()) if legs else []):
@@ -1047,7 +1115,7 @@ def stage(yaw, elev=8.0, size=700, samples=48, dark=True, lens=100, dist=13.0, t
 if __name__ == '__main__':
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:]
     ap = argparse.ArgumentParser()
-    ap.add_argument('--frame', type=int); ap.add_argument('--anim'); ap.add_argument('--step', type=int, default=1); ap.add_argument('--first', type=int, default=1); ap.add_argument('--last', type=int, default=0);
+    ap.add_argument('--frame', type=int); ap.add_argument('--anim'); ap.add_argument('--step', type=int, default=1); ap.add_argument('--first', type=int, default=1); ap.add_argument('--follow', action='store_true'); ap.add_argument('--last', type=int, default=0);
     ap.add_argument('--pose', default='front'); ap.add_argument('--view', type=float, default=0)
     ap.add_argument('--elev', type=float, default=3); ap.add_argument('--lens', type=float, default=100)
     ap.add_argument('--dist', type=float, default=13); ap.add_argument('--size', type=int, default=700)
@@ -1068,9 +1136,32 @@ if __name__ == '__main__':
             use_move(a.anim)
             end = a.last or int(rig.animation_data.action.frame_range[1])
             fr = [a.frame] if a.frame else range(a.first, end + 1, a.step)
+            offsets = {}
+            if a.follow:
+                # Keep him centred in every frame (the camera's lens shift), relative to where he
+                # stands at the end, and record how far the frame moved, so a player can draw each
+                # frame at his real place on screen. The shift is the same as cropping a bigger shot.
+                from bpy_extras.object_utils import world_to_camera_view
+                import json
+                def at(f_):
+                    sc.frame_set(f_); bpy.context.view_layer.update()
+                    p_ = rig.matrix_world @ rig.pose.bones['body'].head
+                    return world_to_camera_view(sc, sc.camera, p_)
+                end_uv = at(int(rig.animation_data.action.frame_range[1]))
             for f_ in fr:
+                if a.follow:
+                    sc.camera.data.shift_x = 0; sc.camera.data.shift_y = 0
+                    uv = at(f_)
+                    dx, dy = uv.x - end_uv.x, uv.y - end_uv.y
+                    sc.camera.data.shift_x = dx; sc.camera.data.shift_y = dy
+                    offsets[f_] = (dx, -dy)                     # in frame widths; y down, like a page
                 sc.frame_set(f_); sc.render.filepath = a.out.replace('#', f'{f_:03d}')
                 bpy.ops.render.render(write_still=True)
+            if a.follow:
+                import os, json
+                path = os.path.join(os.path.dirname(a.out), 'offsets.json')
+                old = json.load(open(path)) if os.path.exists(path) else {}
+                old.update({str(k): v for k, v in offsets.items()}); json.dump(old, open(path, 'w'))
         else:
             sc.render.filepath = a.out
             bpy.ops.render.render(write_still=True)

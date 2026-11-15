@@ -21,6 +21,14 @@ out = pathlib.Path(__file__).resolve().parents[2] / 'public/avatar'
 out.mkdir(parents=True, exist_ok=True)
 
 moves = {'idle': (sorted((src / 'idle').glob('f*.png')), 12), 'wave': (sorted((src / 'wave').glob('f*.png')), 24)}
+# The walk-in (optional): rendered on twos with --follow, so each frame is centred on him and
+# offsets.json says how far (in render frame widths) each frame sits from his resting spot.
+OFFS = {}
+wfiles = sorted(src.glob('walkin/*/f*.png'), key=lambda p: int(p.stem[1:]))
+for j in src.glob('walkin/*/offsets.json'):
+    OFFS.update(json.loads(j.read_text()))
+if wfiles:
+    moves['walkin'] = (wfiles, 12)
 everything = [p for files, _ in moves.values() for p in files] + [src / 'sleep.png']
 box = None
 for p in everything:
@@ -52,6 +60,10 @@ for name, (files, fps) in moves.items():
         sheet.paste(frame(p), ((i % cols) * W, (i // cols) * H))
     sheet.save(out / f'{name}.webp', 'WEBP', quality=72, method=6)
     meta[name] = {'sheet': f'{name}.webp', 'w': W, 'h': H, 'cols': cols, 'frames': len(files), 'fps': fps}
+    if name == 'walkin':
+        rw = Image.open(files[0]).width; k = W / bw                  # render px -> sheet px
+        meta[name]['dx'] = [round(OFFS[str(int(p.stem[1:]))][0] * rw * k, 1) for p in files]
+        meta[name]['dy'] = [round(OFFS[str(int(p.stem[1:]))][1] * rw * k, 1) for p in files]
     print(name, len(files), 'frames', sheet.size, (out / f'{name}.webp').stat().st_size // 1024, 'KB')
 frame(moves['idle'][0][0]).save(out / 'still.webp', 'WEBP', quality=88, method=6)
 frame(src / 'sleep.png').save(out / 'sleep.webp', 'WEBP', quality=88, method=6)
