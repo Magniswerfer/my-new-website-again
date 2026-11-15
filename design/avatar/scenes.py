@@ -206,17 +206,25 @@ def d20(M):
     return group('Die', [ob, t])
 
 
-def beanbag(M):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=160, ring_count=96, radius=1); ob = bpy.context.object; ob.name = 'Beanbag'
-    rng = np.random.default_rng(3)
+def blob(name, M, rx, ry, rz, flat=0.25, seed=0.0):
+    """A soft, slightly lumpy fabric mass with a flattened underside (it sits on the floor at z = 0)."""
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=160, ring_count=96, radius=1); ob = bpy.context.object; ob.name = name
     for v in ob.data.vertices:
         x, y, z = v.co
-        k = 1 + 0.05 * math.sin(5 * x + 2 * y) * math.cos(4 * z) + 0.03 * math.sin(9 * y + 3 * z)
-        z2 = z * 0.5 if z > -0.2 else z * 0.42
-        v.co = Vector((x * 1.25 * k, y * 1.05 * k, (z2 + 0.08 * max(0.0, -y)) * k))
+        fold = 0.022 * math.sin(5 * x + 2.5 * y + seed) * math.cos(4 * z) + 0.012 * math.sin(9 * y - 3 * x + seed)
+        zz = z if z > -flat else -flat + (z + flat) * 0.12                  # squashed flat underneath
+        v.co = Vector((x * rx * (1 + fold), y * ry * (1 + fold), (zz + flat) * rz * (1 + 0.5 * fold)))
     ob.data.materials.append(M['bean']); smooth(ob)
     sub = ob.modifiers.new('S', 'SUBSURF'); sub.levels = 1; sub.render_levels = 2
     return ob
+
+
+def beanbag(M):
+    """A beanbag in two soft lobes of the same fabric: a low seat under him and a big rounded back
+    behind him that he leans into. Built in its own frame (front is -y)."""
+    seat = blob('BeanSeat', M, 1.45, 1.15, 0.42, flat=0.2); seat.location = (0, 0.15, 0)
+    back = blob('BeanBack', M, 1.75, 1.0, 1.3, flat=0.3, seed=1.3); back.location = (0, 1.0, 0)
+    return group('Beanbag', [seat, back])
 
 
 def book_open(M, cover):
@@ -478,24 +486,29 @@ def scene_404(rig, M):
 
 
 def scene_empty(rig, M):
-    """Lounging in a beanbag, eyes happily shut, breathing slowly; the LED glows on."""
+    """Lounging in a beanbag: sitting up on its front, sunk in a little, leaning back into the part that
+    rises behind him, arms resting out on its sides, feet up on the front; eyes happily shut, breathing
+    slowly."""
     act = B.new_action(rig, 'empty')
-    for f in (1, N + 1): sit(rig, f, back=-16, drop=0.55)
+    for f in (1, N + 1): sit(rig, f, back=-30, drop=-0.12)
     for side, sx in (('L', 1), ('R', -1)):
-        for f in (1, N + 1): hold(rig, side=side, f=f, out=42, fwd=-6, curl=6)
-        hold(rig, 48, side, out=44, fwd=-5, curl=6)
+        for f in (1, N + 1): hold(rig, side=side, f=f, out=48, fwd=-14, curl=6)
+        hold(rig, 48, side, out=50, fwd=-13, curl=6)
     for f in range(1, N + 2, 4): breathe(rig, f, depth=0.012)
     for f, y in ((1, 3), (48, 5), (N + 1, 3)):
-        B.joint(rig, 'head', f, x=-3, y=y)
+        B.joint(rig, 'head', f, x=6, y=y)                           # the head tips forward to look out
     B.stash(rig, act, 'empty')
     B.use_move('empty'); bpy.context.scene.frame_set(1)
-    bag = beanbag(M); bag.location = (0, 0.6, 0.45); bag.scale = (1.4, 1.3, 1.35)
+    bag = beanbag(M); bag.location = (0, 0.0, 0.0)
     bind_to(rig, bag, 'root')
-    dent(bag, ['Body', 'Leg.L', 'Leg.R', 'Arm.L', 'Arm.R'])
+    bpy.context.view_layer.update()
+    c = rig.matrix_world @ rig.pose.bones['body'].head
+    for part in bag.children:                         # each lobe is pressed in where he rests on it
+        dent(part, ['Body', 'Leg.L', 'Leg.R', 'Arm.L', 'Arm.R'], centre=c)
     return [bag]
 
 
-def dent(soft, bodies, gap=0.03, frames=(1, 25, 49, 73), push=(0.0, 0.55, -0.85)):
+def dent(soft, bodies, gap=0.03, frames=(1, 25, 49, 73), push=(0.0, 0.55, -0.85), centre=None):
     """Press `soft` (a beanbag) in under him, the way his weight would: every vertex that would be
     inside one of `bodies` (at any of `frames`, so breathing never pokes through) slides along `push`
     (down and back, in the world) until it is just clear of him. He sits in a seat pressed into the bag,
@@ -515,6 +528,10 @@ def dent(soft, bodies, gap=0.03, frames=(1, 25, 49, 73), push=(0.0, 0.55, -0.85)
                     po = Woi @ (Ws @ v.co)
                     loc, nor, _, _ = tree.find_nearest(po)
                     if loc is None or (po - loc).dot(nor) > gap: continue
+                    if centre is not None:                          # away from his centre: a cradle
+                        dwv = (Ws @ v.co) - centre
+                        if dwv.length < 1e-6: continue
+                        do = (Woi.to_3x3() @ dwv.normalized()).normalized()
                     hit = tree.ray_cast(po, do)                     # where the push leaves his surface
                     if hit[0] is None: continue
                     v.co = Wsi @ (Wo @ (hit[0] + do * gap))
