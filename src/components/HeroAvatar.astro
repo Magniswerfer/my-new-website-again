@@ -1,0 +1,128 @@
+---
+/**
+ * The character on the homepage, rendered in Blender (design/avatar/build.py) and played back
+ * frame by frame on a canvas: an idle loop, a wave on arrival and when pointed at, and a sleeping
+ * pose while the site's motion is stopped. Frames live in sprite sheets made by
+ * design/avatar/sheets.py; meta.json gives each move's frame size, count and frame rate.
+ * People who prefer reduced motion get a still frame.
+ */
+import meta from '../../public/avatar/meta.json';
+interface Props { label: string; class?: string }
+const { label, class: cls } = Astro.props;
+const base = '/avatar/';
+---
+
+<div class:list={['hero-av', cls]} data-hero-avatar data-base={base} role="img" aria-label={label}
+  style={`--av-ratio: ${meta.ratio}`}>
+  <img class="still" src={`${base}still.webp`} alt="" aria-hidden="true" decoding="async" />
+  <img class="sleep" src={`${base}sleep.webp`} alt="" aria-hidden="true" loading="lazy" decoding="async" />
+  <canvas aria-hidden="true"></canvas>
+</div>
+
+<style>
+  .hero-av { position: relative; aspect-ratio: var(--av-ratio, 1); cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .hero-av > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .still, .sleep { object-fit: contain; pointer-events: none; transition: opacity 0.35s ease; }
+  canvas { opacity: 0; transition: opacity 0.25s ease; }
+  .hero-av[data-ready] canvas { opacity: 1; }
+  .hero-av[data-ready] .still { opacity: 0; }
+  .sleep { opacity: 0; }
+  .hero-av[data-asleep] .sleep { opacity: 1; }
+  .hero-av[data-asleep] canvas, .hero-av[data-asleep] .still { opacity: 0; }
+</style>
+
+<script>
+  type Move = { sheet: string; w: number; h: number; cols: number; frames: number; fps: number };
+  type Meta = { ratio: number; idle: Move; wave: Move };
+  type Box = HTMLElement & { _stop?: () => void };
+
+  const motionOn = () => { try { return localStorage.getItem('mhk:motion') !== 'off'; } catch { return true; } };
+  const load = (src: string) => new Promise<HTMLImageElement>((ok, no) => {
+    const im = new Image(); im.decoding = 'async'; im.onload = () => ok(im); im.onerror = no; im.src = src;
+  });
+
+  async function start(box: Box) {
+    box._stop?.();
+    const base = box.dataset.base!;
+    const meta: Meta = await (await fetch(base + 'meta.json')).json();
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const asleep = () => box.toggleAttribute('data-asleep', !motionOn());
+    asleep();
+    const onMotion = () => asleep();
+    document.addEventListener('mhk:motion', onMotion);
+    if (reduce) { box._stop = () => document.removeEventListener('mhk:motion', onMotion); return; }
+
+    // The idle comes first; the wave loads behind it and is only played once it has arrived.
+    const idle = await load(base + meta.idle.sheet);
+    const canvas = box.querySelector('canvas')!;
+    const ctx = canvas.getContext('2d')!;
+    const sheets: Record<'idle' | 'wave', { m: Move; im: HTMLImageElement | null }> = { idle: { m: meta.idle, im: idle }, wave: { m: meta.wave, im: null } };
+    let wantWave = false;
+    load(base + meta.wave.sheet).then((im) => { sheets.wave.im = im; if (wantWave) waveQueued = true; }).catch(() => {});
+
+    const fit = () => {
+      const r = canvas.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+      canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    };
+    fit();
+    const ro = new ResizeObserver(fit); ro.observe(canvas);
+
+    // Which move is playing, from when; the previous frame cross-fades out over a few frames so a
+    // wave can start from anywhere in the idle loop without a jump.
+    let move: 'idle' | 'wave' = 'idle', t0 = performance.now(), fadeFrom: { k: 'idle' | 'wave'; f: number } | null = null, fadeT = 0;
+    let visible = true, raf = 0, waveQueued = false;
+
+    const draw = (k: 'idle' | 'wave', f: number, alpha = 1) => {
+      const { m, im } = sheets[k];
+      const sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h;
+      ctx.globalAlpha = alpha;
+      if (im) ctx.drawImage(im, sx, sy, m.w, m.h, 0, 0, canvas.width, canvas.height);
+    };
+    const frameOf = (k: 'idle' | 'wave', now: number) => {
+      const m = sheets[k].m; const f = Math.floor(((now - t0) / 1000) * m.fps);
+      return k === 'idle' ? f % m.frames : f;
+    };
+    const play = (k: 'idle' | 'wave', now: number) => {
+      fadeFrom = { k: move, f: Math.min(frameOf(move, now), sheets[move].m.frames - 1) }; fadeT = now;
+      move = k; t0 = now;
+    };
+
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      if (!visible || box.hasAttribute('data-asleep')) return;
+      if (waveQueued) { waveQueued = false; play('wave', now); }
+      let f = frameOf(move, now);
+      if (move === 'wave' && f >= sheets.wave.m.frames) { play('idle', now); f = 0; }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      draw(move, f);
+      if (fadeFrom) {
+        const a = 1 - (now - fadeT) / 140;
+        if (a > 0) draw(fadeFrom.k, fadeFrom.f, a); else fadeFrom = null;
+      }
+      ctx.globalAlpha = 1;
+      if (!box.hasAttribute('data-ready')) box.setAttribute('data-ready', '');
+    };
+    raf = requestAnimationFrame(tick);
+
+    const hello = () => {
+      if (!motionOn() || move === 'wave') return;
+      if (sheets.wave.im) waveQueued = true; else wantWave = true;
+    };
+    box.addEventListener('pointerenter', hello);
+    box.addEventListener('click', hello);
+    const greet = window.setTimeout(hello, 900);             // say hello once on arrival
+    const io = new IntersectionObserver((e) => (visible = e[0].isIntersecting)); io.observe(box);
+
+    box._stop = () => {
+      cancelAnimationFrame(raf); clearTimeout(greet); ro.disconnect(); io.disconnect();
+      box.removeEventListener('pointerenter', hello); box.removeEventListener('click', hello);
+      document.removeEventListener('mhk:motion', onMotion);
+    };
+  }
+
+  function init() {
+    document.querySelectorAll<Box>('[data-hero-avatar]').forEach((b) => { start(b).catch(() => {}); });
+  }
+  document.addEventListener('astro:page-load', init);
+  document.addEventListener('astro:before-swap', () => document.querySelectorAll<Box>('[data-hero-avatar]').forEach((b) => b._stop?.()));
+</script>

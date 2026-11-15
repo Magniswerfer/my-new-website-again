@@ -15,7 +15,7 @@ import json, sys, pathlib
 import numpy as np
 from PIL import Image
 
-SIZE = 640                                   # frame height in the sheets (2x for a ~320 px display)
+SIZE = 512                                   # frame height in the sheets
 src = pathlib.Path(sys.argv[1])
 out = pathlib.Path(__file__).resolve().parents[2] / 'public/avatar'
 out.mkdir(parents=True, exist_ok=True)
@@ -25,7 +25,7 @@ everything = [p for files, _ in moves.values() for p in files] + [src / 'sleep.p
 box = None
 for p in everything:
     a = np.asarray(Image.open(p).convert('RGBA'))[:, :, 3]
-    ys, xs = np.where(a > 6)
+    ys, xs = np.where(a > 40)                 # ignore the floor's faint wash when finding his bounds
     b = [xs.min(), ys.min(), xs.max() + 1, ys.max() + 1]
     box = b if box is None else [min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3])]
 pad = 6
@@ -35,7 +35,12 @@ H = SIZE; W = round(bw * H / bh)
 
 
 def frame(p):
-    return Image.open(p).convert('RGBA').crop(box).resize((W, H), Image.LANCZOS)
+    im = np.asarray(Image.open(p).convert('RGBA')).astype(float)
+    # The floor is a shadow catcher: it leaves a faint grey wash (alpha ~10-35) everywhere, whose edge
+    # would show as a rectangle. Keep only the real contact shadow under him.
+    floor = (im[:, :, :3].max(2) < 10) & (im[:, :, 3] < 250)
+    im[:, :, 3] = np.where(floor, np.clip((im[:, :, 3] - 34) * 1.35, 0, 255), im[:, :, 3])
+    return Image.fromarray(im.astype(np.uint8)).crop(box).resize((W, H), Image.LANCZOS)
 
 
 meta = {'ratio': round(W / H, 4)}
@@ -45,7 +50,7 @@ for name, (files, fps) in moves.items():
     sheet = Image.new('RGBA', (cols * W, rows * H))
     for i, p in enumerate(files):
         sheet.paste(frame(p), ((i % cols) * W, (i // cols) * H))
-    sheet.save(out / f'{name}.webp', 'WEBP', quality=82, method=6)
+    sheet.save(out / f'{name}.webp', 'WEBP', quality=72, method=6)
     meta[name] = {'sheet': f'{name}.webp', 'w': W, 'h': H, 'cols': cols, 'frames': len(files), 'fps': fps}
     print(name, len(files), 'frames', sheet.size, (out / f'{name}.webp').stat().st_size // 1024, 'KB')
 frame(moves['idle'][0][0]).save(out / 'still.webp', 'WEBP', quality=88, method=6)
