@@ -136,10 +136,17 @@ const base = '/avatar/';
       }
       if (move === 'wave' && f >= sheets.wave.m.frames) { play('idle', now); f = 0; }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      draw(move, f);
-      if (fadeFrom) {
-        const a = 1 - (now - fadeT) / 140;
-        if (a > 0) draw(fadeFrom.k, fadeFrom.f, a); else fadeFrom = null;
+      const a = fadeFrom ? 1 - (now - fadeT) / 140 : 0;
+      if (fadeFrom && a > 0) {
+        // A true cross-dissolve: old x a + new x (1 - a), added together. Drawing one over the other
+        // would stack the two soft shadows and make them pulse darker for a moment.
+        draw(fadeFrom.k, fadeFrom.f, a);
+        ctx.globalCompositeOperation = 'lighter';
+        draw(move, f, 1 - a);
+        ctx.globalCompositeOperation = 'source-over';
+      } else {
+        fadeFrom = null;
+        draw(move, f);
       }
       ctx.globalAlpha = 1;
       if (!box.hasAttribute('data-ready')) box.setAttribute('data-ready', '');
