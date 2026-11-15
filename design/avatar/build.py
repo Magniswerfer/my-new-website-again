@@ -20,9 +20,9 @@ from mathutils import Vector, Matrix, Euler
 
 EXPO = -0.9
 PX = 52.5                    # sheet pixels per unit
-DEPTH = 0.97                 # body depth / width
+DEPTH = 0.91                 # body depth / width
 LEG_H = 16 / PX              # visible leg below the body
-BODY_H = 125 / PX
+BODY_H = 2.44                # body height in half-widths (height / width = 1.22)
 Z0 = LEG_H
 ZT = Z0 + BODY_H
 
@@ -32,13 +32,13 @@ PROFILE = [(0, 0.0), (1, 0.12), (3, 0.34), (6, 0.47), (9, 0.55), (12, 0.62), (15
            (42, 0.958), (48, 0.978), (54, 0.99), (62, 1.0), (78, 1.0), (86, 0.995), (94, 0.978),
            (100, 0.955), (105, 0.93), (110, 0.9), (114, 0.865), (117, 0.825), (120, 0.76), (122.5, 0.67),
            (124.2, 0.57), (125, 0.44)]
-GROOVES = [92.5, 101.8, 110.8]
+GROOVES = [0.642, 0.714, 0.786, 0.855]   # share of body height from the top: four grooves, three ribs
 
-FACE = dict(eye_x=0.34, eye_s=0.335, eye_w=0.16, eye_h=0.264,
-            smile_w=0.125, smile_end=0.392, smile_bot=0.424, smile_r=0.024,
-            led_x=0.0, led_s=0.615, led_r=0.072,
-            key_x=0.4, key_s=0.615, key_w=0.42, key_h=0.17)
-ARM = dict(x=0.95, y=-0.12, s=0.725, rx=0.34, ry=0.35, rz=0.38)
+FACE = dict(eye_x=0.34, eye_s=0.305, eye_w=0.16, eye_h=0.264,
+            smile_w=0.125, smile_end=0.36, smile_bot=0.392, smile_r=0.024,
+            led_x=0.0, led_s=0.53, led_r=0.072,
+            key_x=0.4, key_s=0.53, key_w=0.42, key_h=0.17)
+ARM = dict(x=0.95, y=-0.12, s=0.7, rx=0.34, ry=0.35, rz=0.38)
 LEG = dict(x=0.42, y=-0.06, r=0.33, ry=0.37)
 
 
@@ -47,22 +47,23 @@ def pchip(xs, ys, x):
     return float(PchipInterpolator(xs, ys)(x))
 
 
+# Front outline from the body sheet: (share of height from the top, half-width).
+OUTLINE = [(0.0, 0.0), (0.006, 0.17), (0.025, 0.372), (0.05, 0.493), (0.075, 0.581), (0.1, 0.65), (0.125, 0.706),
+           (0.15, 0.753), (0.175, 0.794), (0.2, 0.827), (0.225, 0.859), (0.25, 0.883), (0.275, 0.906), (0.3, 0.926),
+           (0.325, 0.944), (0.35, 0.957), (0.375, 0.971), (0.4, 0.98), (0.425, 0.989), (0.45, 0.996), (0.5, 1.0),
+           (0.6, 1.0), (0.65, 0.997), (0.7, 0.989), (0.75, 0.968), (0.8, 0.933), (0.825, 0.899), (0.85, 0.87),
+           (0.875, 0.825), (0.9, 0.765), (0.925, 0.684), (0.95, 0.585), (0.97, 0.47), (0.985, 0.37), (1.0, 0.3)]
+
+
 def half_width(s):
-    """Half-width s sheet-pixels down from the top: a superellipse dome (round shoulders),
-    straight sides, and a rounded base like a moulded part, not an egg."""
-    s = min(max(s, 0), 125)
-    DOME, BASE, R = 60.0, 109.0, 0.3      # dome height (px), where the base fillet starts, fillet radius (W)
-    if s < DOME:
-        t = (DOME - s) / DOME
-        r = (1 - t ** 2.1) ** (1 / 2.1)
-    elif s < BASE:
-        r = 1.0
-    else:
-        t = min(1.0, (s - BASE) / (125 - BASE))
-        r = (1 - R) + R * math.sqrt(max(0.0, 1 - t * t))
+    """Half-width at s sheet-pixels (0..125) down from the top: the measured outline, with
+    narrow shallow grooves between broad ribs whose edges are softly rounded."""
+    f = min(max(s / 125, 0), 1)
+    xs, ys = zip(*OUTLINE)
+    r = pchip(xs, ys, f)
     for g in GROOVES:
-        d = s - g
-        r -= 0.028 * math.exp(-(d / 0.6) ** 2) + 0.004 * math.exp(-(d / 2.0) ** 2)
+        d = f - g
+        r -= 0.018 * math.exp(-(d / 0.0045) ** 2) + 0.012 * math.exp(-(d / 0.016) ** 2)
     return r
 
 
@@ -94,9 +95,9 @@ def make_body():
     rings = []
     # Dense rings round the grooves, looser elsewhere.
     ss = sorted(set([0.15 * k for k in range(1, 30)] + list(np.arange(4.5, 22, 0.55)) + list(np.arange(22, 82, 0.28))
-                    + list(np.arange(82, 125, 0.55))))
+                    + list(np.arange(82, 125, 0.4)) + [g * 125 + k for g in GROOVES for k in np.arange(-2.5, 2.5, 0.12)]))
     for s in ss:
-        rings.append((ZT - s / PX, half_width(s)))
+        rings.append((ZT - s / 125 * BODY_H, half_width(s)))
     rb = rings[-1][1]
     for t in (0.5, 0.75, 0.9):
         rings.append((Z0 - 0.002 * t, rb * (1 - t)))
