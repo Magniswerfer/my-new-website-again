@@ -148,7 +148,7 @@ The homepage plays Blender renders of the model:
   - 404 page: old terminal
 - Empty lists: he lounges in a beanbag, or carries a stack of books on My rotation.
 - Essays end with him lying down reading.
-- Small marks: the flat drawing (`Avatar2D`) next to the name in the header and as the favicon.
+- Small marks: a render of the model next to the name in the header, and his head and chest as the favicon (`design/avatar/marks.py`).
 
 Unplaced poses, ready to use: walking, cheering, reading, napping, thinking, controller, backpack, binoculars, magnifier, screwdriver, box, tablet.
 

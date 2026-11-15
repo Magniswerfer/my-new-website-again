@@ -35,7 +35,10 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <link rel="alternate" hreflang={other(lang)} href={new URL(alt, Astro.site)} />
     <link rel="alternate" hreflang={lang} href={canonical} />
     <link rel="alternate" type="application/rss+xml" title={`Magnus H. Kaspersen (${lang.toUpperCase()})`} href={url(lang, 'rss.xml').slice(0, -1)} />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
+    <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <meta name="theme-color" content="#edece7" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#1a1b1e" media="(prefers-color-scheme: dark)" />

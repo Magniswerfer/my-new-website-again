@@ -27,8 +27,10 @@ for k, suf in ((1, ''), (2, '@2x'), (3, '@3x')):
 print('mark', round(fig.width * H / fig.height), 'x', H)
 
 # Favicon: the head and chest, square, a little padding.
-top = ys.min(); bw = xs.max() - xs.min(); cx = (xs.min() + xs.max()) / 2
-side = int(bw * 0.78)
+top = ys.min(); H_ = ys.max() - top
+band = (ys < top + 0.35 * H_)                                    # the dome: centre and width from it alone
+hx = xs[band]; cx = (hx.min() + hx.max()) / 2
+side = int((hx.max() - hx.min()) * 1.12)
 head = im.crop((int(cx - side / 2), top - int(side * 0.04), int(cx + side / 2), top - int(side * 0.04) + side))
 for n in (32, 48, 192):
     head.resize((n, n), Image.LANCZOS).save(pub / (f'favicon-{n}.png' if n < 100 else f'icon-{n}.png'))

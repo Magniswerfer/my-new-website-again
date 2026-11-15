@@ -5,7 +5,6 @@
  * as a full-page sheet and turns into CLOSE.
  */
 import Icon, { type IconName } from './Icon.astro';
-import Avatar2D from './Avatar2D.astro';
 import { t, url, other, type Lang } from '~/i18n';
 
 interface Props { lang: Lang; alternate: string; current?: string }
@@ -19,12 +18,14 @@ const items: [string, IconName, Parameters<typeof t>[1]][] = [
   ['rotation', 'rotation', 'nav.bookshelf'],
   ['about', 'about', 'nav.about'],
 ];
+// The rendered character next to the name (design/avatar/marks.py); its width at 30 px tall.
+const markW = 26;
 ---
 
 <header class="head" data-head>
   <div class="wrap head-in">
     <div class="bar">
-      <a class="name" href={url(lang)}><Avatar2D size={26} />Magnus H. Kaspersen</a>
+      <a class="name" href={url(lang)}><img class="mark" src="/avatar/mark.webp" srcset="/avatar/mark.webp 1x, /avatar/mark@2x.webp 2x, /avatar/mark@3x.webp 3x" width={markW} height="30" alt="" />Magnus H. Kaspersen</a>
       <button type="button" class="key menu-key" data-menu-key aria-expanded="false" aria-controls="site-menu"
         data-open-label={t(lang, 'menu.close')} data-closed-label={t(lang, 'menu.open')}>
         <span class="led"></span><span data-menu-label>{t(lang, 'menu.open')}</span>
@@ -81,7 +82,7 @@ const items: [string, IconName, Parameters<typeof t>[1]][] = [
   .head-in { display: flex; align-items: center; justify-content: space-between; min-height: 84px; gap: 24px; }
   .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
   .name { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.19rem; text-decoration: none; letter-spacing: -0.005em; white-space: nowrap; }
-  .name :global(.avatar-2d) { margin-top: -4px; }
+  .mark { display: block; height: 30px; width: auto; margin-top: -6px; }
   .menu-key { display: none; }
 
   /* Desktop: one row of keys in a recessed strip. */
