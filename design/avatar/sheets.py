@@ -42,13 +42,21 @@ bw, bh = box[2] - box[0], box[3] - box[1]
 H = SIZE; W = round(bw * H / bh)
 
 
-def frame(p):
+def frame(p, shadow=1.0):
     im = np.asarray(Image.open(p).convert('RGBA')).astype(float)
     # The floor is a shadow catcher: it leaves a faint grey wash (alpha ~10-35) everywhere, whose edge
     # would show as a rectangle. Keep only the real contact shadow under him.
     floor = (im[:, :, :3].max(2) < 10) & (im[:, :, 3] < 250)
     im[:, :, 3] = np.where(floor, np.clip((im[:, :, 3] - 34) * 1.35, 0, 255), im[:, :, 3])
-    return Image.fromarray(im.astype(np.uint8)).crop(box).resize((W, H), Image.LANCZOS)
+    out = np.asarray(Image.fromarray(im.astype(np.uint8)).crop(box).resize((W, H), Image.LANCZOS)).astype(float)
+    # Feather the shadow toward the frame's edges, so a long shadow never ends in a hard line.
+    h, w = out.shape[:2]
+    ex = np.clip(np.minimum(np.arange(w), w - 1 - np.arange(w)) / (0.12 * w), 0, 1)
+    ey = np.clip((h - 1 - np.arange(h)) / (0.06 * h), 0, 1)
+    ramp = np.minimum(ey[:, None], ex[None, :])
+    shade = (out[:, :, :3].max(2) < 12) & (out[:, :, 3] < 250)
+    out[:, :, 3] = np.where(shade, out[:, :, 3] * ramp * shadow, out[:, :, 3])
+    return Image.fromarray(out.astype(np.uint8))
 
 
 meta = {'ratio': round(W / H, 4)}
@@ -56,8 +64,12 @@ for name, (files, fps) in moves.items():
     cols = max(1, 8192 // W)
     rows = -(-len(files) // cols)
     sheet = Image.new('RGBA', (cols * W, rows * H))
+    far = max([abs(OFFS[str(int(q.stem[1:]))][0]) for q in files] or [1]) if name == 'walkin' else 1
     for i, p in enumerate(files):
-        sheet.paste(frame(p), ((i % cols) * W, (i // cols) * H))
+        # Far from his spot the studio light is low on him and his shadow stretches; soften it
+        # while he's out there, easing to the normal shadow as he arrives.
+        k = 1.0 if name != 'walkin' else 1 - 0.65 * abs(OFFS[str(int(p.stem[1:]))][0]) / far
+        sheet.paste(frame(p, k), ((i % cols) * W, (i // cols) * H))
     sheet.save(out / f'{name}.webp', 'WEBP', quality=72, method=6)
     meta[name] = {'sheet': f'{name}.webp', 'w': W, 'h': H, 'cols': cols, 'frames': len(files), 'fps': fps}
     if name == 'walkin':

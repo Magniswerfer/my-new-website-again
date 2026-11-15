@@ -146,7 +146,7 @@ const base = '/avatar/';
         ctx.globalCompositeOperation = 'source-over';
       } else {
         fadeFrom = null;
-        draw(move, f);
+        draw(move, f, move === 'walkin' ? Math.min(1, (f + 1) / 6) : 1);   // walks in out of nothing
       }
       ctx.globalAlpha = 1;
       if (!box.hasAttribute('data-ready')) box.setAttribute('data-ready', '');
