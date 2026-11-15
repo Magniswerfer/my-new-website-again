@@ -35,6 +35,12 @@ crop = (int(cx - side / 2), int(cy - side / 2), int(cx + side / 2), int(cy + sid
 frames = []
 for f in files:
     im = Image.open(f).convert('RGBA')
+    # The render's floor leaves a faint wash right to the frame's edge; keep only the real shadow,
+    # so no edge shows where the frame meets the added background.
+    a_ = np.asarray(im).astype(float)
+    fl = (a_[:, :, :3].max(2) < 10) & (a_[:, :, 3] < 250)
+    a_[:, :, 3] = np.where(fl, np.clip((a_[:, :, 3] - 34) * 1.35, 0, 255), a_[:, :, 3])
+    im = Image.fromarray(a_.astype(np.uint8))
     # The square can reach past the render's edges: lay the frame on a page-coloured canvas first.
     pad = int(side)
     bg = Image.new('RGBA', (im.width + 2 * pad, im.height + 2 * pad), BG + (255,)); bg.alpha_composite(im, (pad, pad))
