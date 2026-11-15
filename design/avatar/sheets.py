@@ -15,6 +15,51 @@ import json, sys, pathlib
 import numpy as np
 from PIL import Image
 
+if len(sys.argv) > 1 and sys.argv[1] == '--scene':
+    # A page scene: python3 sheets.py --scene NAME DIR [SIZE] [WAVE_DIR]
+    # DIR holds f###.png (the loop on twos, from scenes.py). Writes public/avatar/scenes/NAME/:
+    # loop.webp (+ wave.webp), still.webp and meta.json.
+    name, sdir = sys.argv[2], pathlib.Path(sys.argv[3])
+    size = int(sys.argv[4]) if len(sys.argv) > 4 else 420
+    wdir = pathlib.Path(sys.argv[5]) if len(sys.argv) > 5 else None
+    out = pathlib.Path(__file__).resolve().parents[2] / 'public/avatar/scenes' / name
+    out.mkdir(parents=True, exist_ok=True)
+    loop = sorted(sdir.glob('f*.png'))
+    if loop and loop[-1].stem == 'f097': loop = loop[:-1]
+    wave = sorted(wdir.glob('f*.png')) if wdir else []
+    def floor(p):
+        im = np.asarray(Image.open(p).convert('RGBA')).astype(float)
+        fl = (im[:, :, :3].max(2) < 10) & (im[:, :, 3] < 250)
+        im[:, :, 3] = np.where(fl, np.clip((im[:, :, 3] - 34) * 1.35, 0, 255), im[:, :, 3])
+        return im
+    box = None
+    for p in loop + wave:
+        a = floor(p)[:, :, 3]; ys, xs = np.where(a > 40)
+        b = [xs.min(), ys.min(), xs.max() + 1, ys.max() + 1]
+        box = b if box is None else [min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3])]
+    pad = 8; box = (box[0] - pad, box[1] - pad, box[2] + pad, box[3] + pad)
+    bw, bh = box[2] - box[0], box[3] - box[1]; H = size; W = round(bw * H / bh)
+    def cell(p):
+        im = Image.fromarray(floor(p).astype(np.uint8)).crop(box).resize((W, H), Image.LANCZOS)
+        o = np.asarray(im).astype(float); h, w = o.shape[:2]
+        ex = np.clip(np.minimum(np.arange(w), w - 1 - np.arange(w)) / (0.1 * w), 0, 1)
+        ey = np.clip((h - 1 - np.arange(h)) / (0.06 * h), 0, 1)
+        sh = (o[:, :, :3].max(2) < 12) & (o[:, :, 3] < 250)
+        o[:, :, 3] = np.where(sh, o[:, :, 3] * np.minimum(ey[:, None], ex[None, :]), o[:, :, 3])
+        return Image.fromarray(o.astype(np.uint8))
+    meta = {'ratio': round(W / H, 4)}
+    for key, files, fps in (('loop', loop, 12), ('wave', wave, 24)):
+        if not files: continue
+        cols = max(1, 8192 // W); rows = -(-len(files) // cols)
+        sheet = Image.new('RGBA', (cols * W, rows * H))
+        for i, p in enumerate(files): sheet.paste(cell(p), ((i % cols) * W, (i // cols) * H))
+        sheet.save(out / f'{key}.webp', 'WEBP', quality=72, method=6)
+        meta[key] = {'sheet': f'{key}.webp', 'w': W, 'h': H, 'cols': cols, 'frames': len(files), 'fps': fps}
+        print(name, key, len(files), (out / f'{key}.webp').stat().st_size // 1024, 'KB')
+    cell(loop[0]).save(out / 'still.webp', 'WEBP', quality=86, method=6)
+    (out / 'meta.json').write_text(json.dumps(meta))
+    sys.exit()
+
 SIZE = 512                                   # frame height in the sheets
 src = pathlib.Path(sys.argv[1])
 out = pathlib.Path(__file__).resolve().parents[2] / 'public/avatar'

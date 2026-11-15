@@ -2,9 +2,12 @@
 /** A page heading: the one loud thing on the page. The contour field runs behind it. */
 import Icon, { type IconName } from './Icon.astro';
 import Avatar, { type Pose } from './Avatar.astro';
+import SceneAvatar from './SceneAvatar.astro';
+import { sceneFor } from '~/lib/scenes';
 
 interface Props { title: string; intro?: string; icon?: IconName; label?: string; pose?: Pose; poseLabel?: string }
 const { title, intro, icon, label, pose, poseLabel } = Astro.props;
+const scene = sceneFor(pose);
 ---
 
 <header class="head" data-field>
@@ -14,7 +17,8 @@ const { title, intro, icon, label, pose, poseLabel } = Astro.props;
     {intro && <p class="intro">{intro}</p>}
     <slot />
   </div>
-  {pose && <Avatar class="pose" pose={pose} label={poseLabel ?? ''} sizes="(max-width: 760px) 130px, 220px" />}
+  {scene ? <SceneAvatar class="pose" scene={scene.scene} ratio={scene.ratio} label={poseLabel} />
+    : pose && <Avatar class="pose" pose={pose} label={poseLabel ?? ''} sizes="(max-width: 760px) 130px, 220px" />}
 </header>
 
 <style>
@@ -25,7 +29,7 @@ const { title, intro, icon, label, pose, poseLabel } = Astro.props;
     margin: -40px calc(-1 * clamp(8px, 3vw, 48px)) clamp(-110px, -8vw, -48px) -40px;
   }
   @media (max-width: 560px) {
-    .head { display: grid; }
+    .head { display: grid; grid-template-columns: 1fr; justify-content: stretch; }
     .head :global(.pose) { justify-self: end; width: 170px; margin: -36px -14px -64px 0; }
   }
   .text { display: grid; gap: 18px; max-width: 36rem; }

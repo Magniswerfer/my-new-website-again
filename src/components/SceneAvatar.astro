@@ -1,0 +1,99 @@
+---
+/**
+ * A page scene of the character (design/avatar/scenes.py), played on a canvas: a 4 s loop, plus a
+ * wave when pointed at if the scene has one. It loads only when it scrolls near the screen. While the
+ * site's motion is stopped, and for people who prefer reduced motion, it shows a still frame.
+ * Sheets and meta.json are in public/avatar/scenes/<scene>/ (design/avatar/sheets.py --scene).
+ */
+interface Props { scene: string; label?: string; class?: string; ratio: number }
+const { scene, label, class: cls, ratio } = Astro.props;
+const base = `/avatar/scenes/${scene}/`;
+---
+
+<div class:list={['scene-av', cls]} data-scene-avatar data-base={base} style={`--av-ratio: ${ratio}`}
+  role={label ? 'img' : undefined} aria-label={label || undefined} aria-hidden={label ? undefined : 'true'}>
+  <img class="still" src={`${base}still.webp`} alt="" aria-hidden="true" loading="lazy" decoding="async" />
+  <canvas aria-hidden="true"></canvas>
+</div>
+
+<style>
+  .scene-av { position: relative; aspect-ratio: var(--av-ratio, 1); user-select: none; -webkit-user-select: none; pointer-events: none; }
+  .scene-av[data-wave] { pointer-events: auto; cursor: pointer; }
+  .scene-av > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .still { object-fit: contain; transition: opacity 0.3s ease; }
+  canvas { opacity: 0; transition: opacity 0.3s ease; }
+  .scene-av[data-playing] canvas { opacity: 1; }
+  .scene-av[data-playing] .still { opacity: 0; }
+</style>
+
+<script>
+  type Move = { sheet: string; w: number; h: number; cols: number; frames: number; fps: number };
+  type Meta = { ratio: number; loop: Move; wave?: Move };
+  type Box = HTMLElement & { _stop?: () => void };
+  const motionOn = () => { try { return localStorage.getItem('mhk:motion') !== 'off'; } catch { return true; } };
+  const load = (src: string) => new Promise<HTMLImageElement>((ok, no) => {
+    const im = new Image(); im.decoding = 'async'; im.onload = () => ok(im); im.onerror = no; im.src = src;
+  });
+
+  function start(box: Box) {
+    box._stop?.();
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const base = box.dataset.base!;
+    const canvas = box.querySelector('canvas')!; const ctx = canvas.getContext('2d')!;
+    let meta: Meta | null = null, loop: HTMLImageElement | null = null, wave: HTMLImageElement | null = null;
+    let raf = 0, visible = false, t0 = 0, waving = -1, fade = -1;
+
+    const fit = () => {
+      const r = box.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+      canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    };
+    const draw = (m: Move, im: HTMLImageElement, f: number, alpha = 1) => {
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(im, (f % m.cols) * m.w, Math.floor(f / m.cols) * m.h, m.w, m.h, 0, 0, canvas.width, canvas.height);
+    };
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      const on = motionOn();
+      box.toggleAttribute('data-playing', on && !!loop);
+      if (!visible || !on || !meta || !loop) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const lf = Math.floor(((now - t0) / 1000) * meta.loop.fps) % meta.loop.frames;
+      if (waving >= 0 && wave && meta.wave) {
+        const wf = Math.floor(((now - waving) / 1000) * meta.wave.fps);
+        if (wf >= meta.wave.frames) { waving = -1; fade = now; t0 = now; }
+        else { draw(meta.wave, wave, wf); ctx.globalAlpha = 1; return; }
+      }
+      const a = fade >= 0 ? (now - fade) / 140 : 1;
+      if (a < 1 && wave && meta.wave) {         // a true cross-dissolve back from the wave
+        draw(meta.wave, wave, meta.wave.frames - 1, 1 - a);
+        ctx.globalCompositeOperation = 'lighter'; draw(meta.loop, loop, lf, a); ctx.globalCompositeOperation = 'source-over';
+      } else { fade = -1; draw(meta.loop, loop, lf); }
+      ctx.globalAlpha = 1;
+    };
+    const hello = () => { if (wave && waving < 0 && motionOn()) waving = performance.now(); };
+
+    const io = new IntersectionObserver(async (e) => {
+      visible = e[0].isIntersecting;
+      if (!visible || meta) return;
+      try {
+        meta = await (await fetch(base + 'meta.json')).json();
+        loop = await load(base + meta!.loop.sheet); fit(); t0 = performance.now();
+        if (meta!.wave) {
+          box.setAttribute('data-wave', '');
+          load(base + meta!.wave.sheet).then((im) => { wave = im; }).catch(() => {});
+        }
+      } catch {}
+    }, { rootMargin: '200px' });
+    io.observe(box);
+    const ro = new ResizeObserver(fit); ro.observe(box);
+    box.addEventListener('pointerenter', hello); box.addEventListener('click', hello);
+    raf = requestAnimationFrame(tick);
+    box._stop = () => {
+      cancelAnimationFrame(raf); io.disconnect(); ro.disconnect();
+      box.removeEventListener('pointerenter', hello); box.removeEventListener('click', hello);
+    };
+  }
+
+  document.addEventListener('astro:page-load', () => document.querySelectorAll<Box>('[data-scene-avatar]').forEach(start));
+  document.addEventListener('astro:before-swap', () => document.querySelectorAll<Box>('[data-scene-avatar]').forEach((b) => b._stop?.()));
+</script>

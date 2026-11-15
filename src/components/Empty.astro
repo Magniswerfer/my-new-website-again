@@ -1,15 +1,19 @@
 ---
 /** Shown where a list has nothing in it yet: the character lounges until something arrives. */
 import Avatar, { type Pose } from './Avatar.astro';
+import SceneAvatar from './SceneAvatar.astro';
+import { sceneFor } from '~/lib/scenes';
 interface Props { text: string; plain?: boolean; pose?: Pose }
 const { text, plain = false, pose = 'beanbag' } = Astro.props;
+const scene = sceneFor(pose);
 ---
 
 {plain ? <p class="empty">{text}</p> : (
   <div class="row">
     <div class="margin"></div>
     <div class="column nap">
-      <Avatar class="nap-avatar" pose={pose} label="" sizes="170px" />
+      {scene ? <SceneAvatar class="nap-avatar" scene={scene.scene} ratio={scene.ratio} />
+        : <Avatar class="nap-avatar" pose={pose} label="" sizes="170px" />}
       <p class="empty">{text}</p>
     </div>
   </div>

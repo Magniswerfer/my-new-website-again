@@ -7,6 +7,9 @@
 import ReadingLine from './ReadingLine.astro';
 import Icon, { type IconName } from './Icon.astro';
 import Avatar from './Avatar.astro';
+import SceneAvatar from './SceneAvatar.astro';
+import { sceneFor } from '~/lib/scenes';
+const endScene = sceneFor('lie-read');
 
 interface Props {
   margin: string[];
@@ -28,7 +31,8 @@ const { margin, title, icon, readingLine = false } = Astro.props;
   <div class="margin">{readingLine && <ReadingLine />}</div>
   <div class="column">
     <div class="prose"><slot /></div>
-    {readingLine && <div class="end"><Avatar pose="lie-read" label="" sizes="150px" /></div>}
+    {readingLine && <div class="end">{endScene ? <SceneAvatar scene={endScene.scene} ratio={endScene.ratio} />
+      : <Avatar pose="lie-read" label="" sizes="150px" />}</div>}
     <slot name="after" />
   </div>
 </article>
