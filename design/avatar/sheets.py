@@ -33,7 +33,7 @@ if len(sys.argv) > 1 and sys.argv[1] == '--scene':
         im[:, :, 3] = np.where(fl, np.clip((im[:, :, 3] - 34) * 1.35, 0, 255), im[:, :, 3])
         return im
     box = None
-    for p in loop + wave:
+    for p in loop + wave + ([sdir / 'still.png'] if (sdir / 'still.png').exists() else []):
         a = floor(p)[:, :, 3]; ys, xs = np.where(a > 40)
         b = [xs.min(), ys.min(), xs.max() + 1, ys.max() + 1]
         box = b if box is None else [min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3])]
@@ -56,7 +56,8 @@ if len(sys.argv) > 1 and sys.argv[1] == '--scene':
         sheet.save(out / f'{key}.webp', 'WEBP', quality=72, method=6)
         meta[key] = {'sheet': f'{key}.webp', 'w': W, 'h': H, 'cols': cols, 'frames': len(files), 'fps': fps}
         print(name, key, len(files), (out / f'{key}.webp').stat().st_size // 1024, 'KB')
-    cell(loop[0]).save(out / 'still.webp', 'WEBP', quality=86, method=6)
+    st = sdir / 'still.png'      # rendered with the LED off: shown while motion is stopped or reduced
+    cell(st if st.exists() else loop[0]).save(out / 'still.webp', 'WEBP', quality=86, method=6)
     (out / 'meta.json').write_text(json.dumps(meta))
     sys.exit()
 
@@ -122,7 +123,7 @@ for name, (files, fps) in moves.items():
         meta[name]['dx'] = [round(OFFS[str(int(p.stem[1:]))][0] * rw * k, 1) for p in files]
         meta[name]['dy'] = [round(OFFS[str(int(p.stem[1:]))][1] * rw * k, 1) for p in files]
     print(name, len(files), 'frames', sheet.size, (out / f'{name}.webp').stat().st_size // 1024, 'KB')
-frame(moves['idle'][0][0]).save(out / 'still.webp', 'WEBP', quality=88, method=6)
+frame(src / 'still.png' if (src / 'still.png').exists() else moves['idle'][0][0]).save(out / 'still.webp', 'WEBP', quality=88, method=6)
 frame(src / 'sleep.png').save(out / 'sleep.webp', 'WEBP', quality=88, method=6)
 (out / 'meta.json').write_text(json.dumps(meta))
 print(meta)

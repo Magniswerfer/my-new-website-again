@@ -1075,6 +1075,16 @@ def uv_unwrap():
         bpy.ops.object.mode_set(mode='OBJECT'); ob.select_set(False)
 
 
+def led_off():
+    """Turn the LED off for a render: the lens goes to the dark material and its glow light goes out."""
+    off = bpy.data.materials.get('LEDOff')
+    for ob in bpy.data.objects:
+        if ob.type in ('MESH', 'CURVE'):
+            for slot in ob.material_slots:
+                if slot.material and slot.material.name == 'LED': slot.material = off
+        if ob.type == 'LIGHT' and ob.data.type == 'POINT': ob.hide_render = True
+
+
 def stage(yaw, elev=8.0, size=700, samples=48, dark=True, lens=100, dist=13.0, target=None):
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'
@@ -1117,7 +1127,7 @@ def stage(yaw, elev=8.0, size=700, samples=48, dark=True, lens=100, dist=13.0, t
 if __name__ == '__main__':
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:]
     ap = argparse.ArgumentParser()
-    ap.add_argument('--frame', type=int); ap.add_argument('--anim'); ap.add_argument('--step', type=int, default=1); ap.add_argument('--first', type=int, default=1); ap.add_argument('--follow', action='store_true'); ap.add_argument('--last', type=int, default=0);
+    ap.add_argument('--frame', type=int); ap.add_argument('--led-off', action='store_true'); ap.add_argument('--anim'); ap.add_argument('--step', type=int, default=1); ap.add_argument('--first', type=int, default=1); ap.add_argument('--follow', action='store_true'); ap.add_argument('--last', type=int, default=0);
     ap.add_argument('--pose', default='front'); ap.add_argument('--view', type=float, default=0)
     ap.add_argument('--elev', type=float, default=3); ap.add_argument('--lens', type=float, default=100)
     ap.add_argument('--dist', type=float, default=13); ap.add_argument('--size', type=int, default=700)
@@ -1133,6 +1143,7 @@ if __name__ == '__main__':
                                   export_animations=True, export_animation_mode='NLA_TRACKS', export_morph=True)
     if a.out:
         stage(a.view, a.elev, a.size, a.samples, dark=not a.light, lens=a.lens, dist=a.dist, target=a.target)
+        if a.led_off: led_off()
         sc = bpy.context.scene; rig = bpy.data.objects['Rig']
         if a.anim:   # render frames of an animation: --anim wave --frame N (one) or all, every 2nd
             use_move(a.anim)

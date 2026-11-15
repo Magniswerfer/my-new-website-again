@@ -207,7 +207,7 @@ def d20(M):
 
 
 def beanbag(M):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=64, ring_count=40, radius=1); ob = bpy.context.object; ob.name = 'Beanbag'
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=160, ring_count=96, radius=1); ob = bpy.context.object; ob.name = 'Beanbag'
     rng = np.random.default_rng(3)
     for v in ob.data.vertices:
         x, y, z = v.co
@@ -491,7 +491,34 @@ def scene_empty(rig, M):
     B.use_move('empty'); bpy.context.scene.frame_set(1)
     bag = beanbag(M); bag.location = (0, 0.6, 0.45); bag.scale = (1.4, 1.3, 1.35)
     bind_to(rig, bag, 'root')
+    dent(bag, ['Body', 'Leg.L', 'Leg.R', 'Arm.L', 'Arm.R'])
     return [bag]
+
+
+def dent(soft, bodies, gap=0.03, frames=(1, 25, 49, 73), push=(0.0, 0.55, -0.85)):
+    """Press `soft` (a beanbag) in under him, the way his weight would: every vertex that would be
+    inside one of `bodies` (at any of `frames`, so breathing never pokes through) slides along `push`
+    (down and back, in the world) until it is just clear of him. He sits in a seat pressed into the bag,
+    with the bag under and behind him, never over him."""
+    from mathutils.bvhtree import BVHTree
+    sc = bpy.context.scene; me = soft.data
+    dw = Vector(push).normalized()
+    for _ in range(2):                                     # a second pass catches knock-on overlaps
+        for f in frames:
+            sc.frame_set(f); dg = bpy.context.evaluated_depsgraph_get()
+            Ws = soft.matrix_world.copy(); Wsi = Ws.inverted()
+            for name in bodies:
+                ob = bpy.data.objects[name]; tree = BVHTree.FromObject(ob, dg)
+                Woi = ob.matrix_world.inverted(); Wo = ob.matrix_world
+                do = (Woi.to_3x3() @ dw).normalized()
+                for v in me.vertices:
+                    po = Woi @ (Ws @ v.co)
+                    loc, nor, _, _ = tree.find_nearest(po)
+                    if loc is None or (po - loc).dot(nor) > gap: continue
+                    hit = tree.ray_cast(po, do)                     # where the push leaves his surface
+                    if hit[0] is None: continue
+                    v.co = Wsi @ (Wo @ (hit[0] + do * gap))
+    me.update()
 
 
 def scene_essay(rig, M):
@@ -919,12 +946,13 @@ if __name__ == '__main__':
     ap.add_argument('--view', type=float, default=-18); ap.add_argument('--elev', type=float, default=7)
     ap.add_argument('--lens', type=float, default=60); ap.add_argument('--dist', type=float, default=7.6)
     ap.add_argument('--target', type=float, default=1.55); ap.add_argument('--size', type=int, default=760)
-    ap.add_argument('--samples', type=int, default=18); ap.add_argument('--out')
+    ap.add_argument('--samples', type=int, default=18); ap.add_argument('--out'); ap.add_argument('--led-off', action='store_true')
     a = ap.parse_args(argv)
     if a.list:
         print('\n'.join(SCENES)); sys.exit()
     rig = build_scene(a.scene)
     B.stage(a.view, a.elev, a.size, a.samples, dark=True, lens=a.lens, dist=a.dist, target=a.target)
+    if a.led_off: B.led_off()
     sc = bpy.context.scene
     frames = [a.frame] if a.frame else range(a.first, N + 1, a.step)
     for f in frames:
