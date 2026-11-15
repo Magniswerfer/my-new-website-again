@@ -15,7 +15,7 @@ import sys, math, argparse, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import bpy, bmesh
 import numpy as np
-from mathutils import Vector, Matrix
+from mathutils import Vector, Matrix, Euler
 import build as B
 
 N = 96                     # frames per loop
@@ -545,6 +545,350 @@ def scene_rotation_empty(rig, M):
     st = book_stack(M); st.scale = (1.7, 1.7, 1.7); st.location = both_tips(rig) + Vector((0, -0.32, -0.05))
     bind_to(rig, st, 'arm_lower.L')
     return [st]
+
+
+# ====================================================================================================
+# Holding things properly. Props are keyed in the world (parented to the rig's root, so they follow
+# the scene's turn), and each mitten that holds one is solved onto its grip point every few frames, so
+# the mitten sits against the prop instead of floating near it. When a prop is out of reach, the prop
+# moves to the mitten (a held thing goes where the hand is), never the other way round.
+# ====================================================================================================
+from scipy.optimize import minimize
+
+STANDOFF = 0.2          # palm centre to the surface it touches (the mitten's half-thickness)
+
+
+def pose_arm(rig, side, out=0.0, fwd=0.0, inward=0.0, curl=0.0, hug=0.0, slide=0.0):
+    sx = 1 if side == 'L' else -1
+    pb = rig.pose.bones
+    att, sh, lo = (pb[f'{n}.{side}'] for n in ('attach', 'shoulder', 'arm_lower'))
+    att.rotation_quaternion = B.wq(att, Matrix.Rotation(math.radians(-sx * slide), 3, 'Z'))
+    sh.rotation_quaternion = B.wq(sh, B.arm_rot(sx, out, fwd, inward))
+    lo.rotation_quaternion = B.wq(lo, Matrix.Rotation(math.radians(-curl), 3, 'X') @ Matrix.Rotation(math.radians(sx * hug), 3, 'Y'))
+
+
+def palm(rig, side):
+    lo = rig.pose.bones[f'arm_lower.{side}']
+    return rig.matrix_world @ (lo.head + (lo.tail - lo.head) * 0.6)
+
+
+def solve_arm(rig, side, target, curl, hug, x0):
+    """out, fwd, inward, slide that put the palm on `target` (world)."""
+    def cost(x):
+        out, fwd, inward, slide = x
+        pose_arm(rig, side, out, fwd, inward, curl, hug, slide)
+        bpy.context.view_layer.update()
+        d = (palm(rig, side) - target).length
+        pen = max(0, slide - 45) ** 2 + max(0, -8 - slide) ** 2 + max(0, fwd - 140) ** 2 + max(0, -40 - fwd) ** 2
+        return 100 * d * d + 1e-4 * pen + 1e-6 * (out * out + inward * inward)
+    r = minimize(cost, x0, method='Nelder-Mead', options=dict(maxiter=400, xatol=0.05, fatol=1e-7))
+    cost(r.x)
+    return list(r.x), (palm(rig, side) - target)
+
+
+def trs(loc, rot):
+    return Matrix.Translation(Vector(loc)) @ Euler(tuple(math.radians(a) for a in rot), 'XYZ').to_matrix().to_4x4()
+
+
+def key_world(ob, f, M):
+    sc = getattr(ob, '_scale', None) or ob.get('scale0') or tuple(ob.scale)
+    ob['scale0'] = tuple(sc)
+    ob.matrix_world = M @ Matrix.Diagonal((*sc, 1.0))
+    ob.keyframe_insert('location', frame=f); ob.keyframe_insert('rotation_euler', frame=f)
+
+
+def held(rig, name, prop, track, grips, curl=24, hug=22, free=None, step=4, lag=None):
+    """Animate `prop` along `track` [(frame, ((x, y, z), (rx, ry, rz)))] in the world, with each mitten
+    in `grips` {side: ((px, py, pz), (nx, ny, nz))} (a point on the prop and its outward normal, in the
+    prop's own frame) solved onto it every `step` frames. `free` keys the other arm: {side: dict}."""
+    bind_to(rig, prop, 'root')
+    prop.rotation_mode = 'XYZ'
+    guess = {s: [4.0, 40.0, 30.0, 25.0] for s in grips}
+    frames = sorted(set(list(range(1, N + 2, step)) + [k[0] for k in track]))
+    worst = 0.0
+    for f in frames:
+        loc, rot = B.smooth_track([(k[0], (*k[1][0], *k[1][1])) for k in track], f)[:3], \
+                   B.smooth_track([(k[0], (*k[1][0], *k[1][1])) for k in track], f)[3:]
+        M = trs(loc, rot)
+        miss = Vector((0, 0, 0))
+        for side, (p, n) in grips.items():
+            target = M @ (Vector(p) + Vector(n) * STANDOFF)
+            x, err = solve_arm(rig, side, target, curl, hug, guess[side])
+            guess[side] = x
+            B.key_arm(rig, side, f, out=x[0], fwd=x[1], inward=x[2], curl=curl, hug=hug, slide=x[3])
+            miss += err
+        miss /= max(1, len(grips))
+        worst = max(worst, miss.length)
+        key_world(prop, f, Matrix.Translation(miss) @ M)          # the prop sits where the hands are
+        if free:
+            for side, k in free.items():
+                B.key_arm(rig, side, f, **(k(f) if callable(k) else k))
+    print(f'[{name}] largest move of the prop to meet the hands: {worst:.3f}')
+
+
+def shoulder_z():
+    return B.ZT - B.ARM['s'] * B.BODY_H
+
+
+def front_y(s):
+    """The front surface of the shell at s (share of body height from the top), as a y coordinate."""
+    return -B.half_width(s * 125) * B.DEPTH
+
+
+def scene_weeks(rig, M):
+    """Mug in his right mitten; lifts it, nods into a sip, lowers it. Steam drifts up."""
+    act = B.new_action(rig, 'weeks')
+    for f in range(1, N + 2, 4): breathe(rig, f)
+    for f, x in ((1, 0), (28, 0), (38, 9), (54, 9), (64, 2), (72, 0), (N + 1, 0)):
+        B.joint(rig, 'head', f, x=x, y=2 if 36 < f < 60 else 0)
+    blink((84,))
+    g, steam = mug(M); g.scale = (2.0, 2.0, 2.0)
+    zs = shoulder_z(); yf = front_y(0.62)
+    HOLD = ((-0.42, yf - 0.4, zs - 0.05), (0, 0, -40))
+    SIP = ((-0.26, yf - 0.3, zs + 0.3), (-22, 0, -30))
+    track = [(1, HOLD), (26, HOLD), (36, SIP), (54, SIP), (66, HOLD), (N + 1, HOLD)]
+    held(rig, 'weeks', g, track, {'R': ((-0.26, 0, -0.03), (-1, 0, 0))}, curl=26, hug=24,
+         free={'L': lambda f: dict(out=5, fwd=10 + 3 * math.sin(2 * math.pi * f / N), curl=6)})
+    B.stash(rig, act, 'weeks')
+    for i, st in enumerate(steam):
+        obj_action(st, 'weeks')
+        # Rising while he holds it; gone while it's at his mouth (he's drinking it), back after.
+        for f, z, s in ((1, 0, 0.8), (24, 0.04, 1.0), (32, 0.05, 0.0), (60, 0.0, 0.0), (70, 0.0, 0.6), (N + 1, 0, 0.8)):
+            st.location.z = 0.2 + z + i * 0.01; st.scale = (0.7 * max(s, 0.01), 0.7 * max(s, 0.01), 0.6 * max(s, 0.01))
+            st.keyframe_insert('location', frame=f); st.keyframe_insert('scale', frame=f)
+    return [g] + steam
+
+
+def scene_contact(rig, M):
+    """The d20 cupped in both mittens; he looks at it, tosses it up a little, catches it."""
+    act = B.new_action(rig, 'contact')
+    for f in range(1, N + 2, 4): breathe(rig, f)
+    for f, x in ((1, 8), (44, 8), (50, -4), (58, 6), (N + 1, 8)):
+        B.joint(rig, 'head', f, x=x)
+    blink((76,))
+    die = d20(M); die.scale = (1.8, 1.8, 1.8)
+    zs = shoulder_z(); yf = front_y(0.62); c = (0, yf - 0.42, zs + 0.02)
+    track = [(1, (c, (0, 0, 0))), (40, (c, (0, 0, 40))), (44, ((c[0], c[1], c[2] + 0.04), (0, 0, 60))),
+             (50, ((c[0], c[1], c[2] + 0.42), (40, 0, 200))), (56, ((c[0], c[1], c[2] + 0.02), (0, 0, 320))),
+             (58, (c, (0, 0, 330))), (N + 1, (c, (0, 0, 360)))]
+    die.rotation_mode = 'XYZ'
+    # The mittens hold it below its equator; while it's in the air they stay where they caught it.
+    bind_to(rig, die, 'root')
+    hold_track = [(1, track[0][1]), (40, track[1][1]), (44, track[2][1]), (47, ((c[0], c[1], c[2] + 0.06), (0, 0, 80))),
+                  (54, ((c[0], c[1], c[2] + 0.05), (0, 0, 300))), (58, track[5][1]), (N + 1, track[6][1])]
+    held(rig, 'contact', die, hold_track, {'L': ((0.28, 0, -0.06), (1, 0, 0)), 'R': ((-0.28, 0, -0.06), (-1, 0, 0))},
+         curl=30, hug=26)
+    die.animation_data.action = bpy.data.actions.new('contact|Die')       # the die's own flight
+    for f, (loc, rot) in track: key_world(die, f, trs(loc, rot))
+    B.stash(rig, act, 'contact')
+    return [die]
+
+
+def scene_photos(rig, M):
+    """Camera in both mittens, lens to the viewer; a click; lowered and tilted to check the shot."""
+    act = B.new_action(rig, 'photos')
+    for f in range(1, N + 2, 4): breathe(rig, f)
+    for f, x in ((1, -2), (38, -2), (40, -4), (44, -2), (60, -2), (72, 10), (84, 10), (N + 1, -2)):
+        B.joint(rig, 'head', f, x=x)
+    cam = camera(M); cam.scale = (1.9, 1.9, 1.9)
+    zs = shoulder_z(); yf = front_y(0.55)
+    UP = ((0, yf - 0.38, zs + 0.22), (0, 0, 0)); CLICK = ((0, yf - 0.4, zs + 0.2), (-3, 0, 0))
+    CHECK = ((0, yf - 0.36, zs - 0.08), (38, 0, 0))
+    track = [(1, UP), (37, UP), (40, CLICK), (44, UP), (58, UP), (70, CHECK), (82, CHECK), (N + 1, UP)]
+    held(rig, 'photos', cam, track, {'L': ((0.4, 0, 0), (1, 0, 0)), 'R': ((-0.4, 0, 0), (-1, 0, 0))}, curl=28, hug=26)
+    B.stash(rig, act, 'photos')
+    return [cam]
+
+
+def scene_projects(rig, M):
+    """The circuit board in his right mitten, the iron in his left; three dabs, a wisp of smoke, then a
+    pleased look up."""
+    act = B.new_action(rig, 'projects')
+    for f in range(1, N + 2, 4): breathe(rig, f)
+    for f, x, z in ((1, 9, 0), (40, 9, 0), (52, -2, -9), (78, -2, -9), (90, 9, 0), (N + 1, 9, 0)):
+        B.joint(rig, 'head', f, x=x, z=z)
+    blink((56,))
+    iron, pcb, smoke = soldering(M)
+    pcb.scale = (1.8, 1.8, 1.8); iron.scale = (1.6, 1.6, 1.6)
+    zs = shoulder_z(); yf = front_y(0.62)
+    BOARD = ((-0.32, yf - 0.46, zs - 0.26), (-48, 0, -10))
+    held(rig, 'projects-board', pcb, [(1, BOARD), (N + 1, BOARD)], {'R': ((-0.21, 0, -0.02), (-1, 0, 0))}, curl=28, hug=20)
+    # The iron: its tip on a pad, held at the grip; dabs lift it back along its own axis.
+    Mb = trs(*BOARD)
+    pad = Mb @ Vector((0.05 * 1.8, -0.02 * 1.8, -0.02 * 1.8))
+    up = Vector((0.8, 0.05, 0.42)).normalized()                       # from the tip back to the grip: low, from his left
+    q = up.to_track_quat('Z', 'Y').to_euler()
+    def iron_at(lift):
+        tip = pad + up * lift
+        return (tuple(tip + up * (0.37 * 1.6)), tuple(math.degrees(a) for a in q))
+    track = [(f, iron_at(l)) for f, l in ((1, 0.0), (10, 0.06), (14, 0.0), (22, 0.06), (26, 0.0), (34, 0.06), (38, 0.0),
+                                           (50, 0.14), (84, 0.14), (N + 1, 0.0))]
+    held(rig, 'projects-iron', iron, track, {'L': ((0.0, 0.0, 0.0), (0.4, -0.6, 0.0))}, curl=30, hug=12, step=2)
+    B.stash(rig, act, 'projects')
+    smoke.location = pad + Vector((0, -0.02, 0.05)); bind_to(rig, smoke, 'root')
+    obj_action(smoke, 'projects')
+    for f, s in ((1, 0.01), (12, 0.01), (20, 1.0), (40, 1.0), (48, 0.01), (N + 1, 0.01)):
+        smoke.scale = (s, s, s); smoke.keyframe_insert('scale', frame=f)
+    return [iron, pcb, smoke]
+
+
+def typing(rig, name, keys_center, width):
+    """Both mittens on the keys; they tap in turns, pause, and glance up (head keys done by caller)."""
+    taps = {}
+    for f in range(1, N + 2, 3):
+        pause = 40 <= f <= 62
+        for side, sx, ph in (('L', 1, 0), ('R', -1, 1)):
+            lift = 0.0 if pause else 0.05 * ((f // 3 + ph) % 2)
+            taps.setdefault(side, []).append((f, Vector(keys_center) + Vector((sx * width, 0.02, STANDOFF * 0.9 + lift))))
+    guess = {'L': [4.0, 30.0, 25.0, 25.0], 'R': [4.0, 30.0, 25.0, 25.0]}
+    worst = 0.0
+    for side, seq in taps.items():
+        for f, target in seq:
+            x, err = solve_arm(rig, side, target, 20, 10, guess[side]); guess[side] = x
+            B.key_arm(rig, side, f, out=x[0], fwd=x[1], inward=x[2], curl=20, hug=10, slide=x[3])
+            worst = max(worst, err.length)
+    print(f'[{name}] largest gap between a mitten and the keys: {worst:.3f}')
+
+
+def reach_point(rig, f, sides=('L', 'R')):
+    """Where the palms land with the arms resting forward, at frame f (used to place keyboards)."""
+    bpy.context.scene.frame_set(f)
+    for s in sides: pose_arm(rig, s, 4, 34, 28, 20, 10, 30)
+    bpy.context.view_layer.update()
+    return [palm(rig, s) for s in sides]
+
+
+def scene_blog(rig, M):
+    """Sitting with a laptop just in front of him, typing on its keys; a pause and a glance up."""
+    act = B.new_action(rig, 'blog')
+    for f in (1, N + 1): sit(rig, f)
+    for f, x, z in ((1, 7, 0), (38, 7, 0), (46, -3, -10), (58, -3, -10), (66, 7, 0), (N + 1, 7, 0)):
+        B.joint(rig, 'head', f, x=x, z=z)
+    for f in range(1, N + 2, 4): breathe(rig, f)
+    blink((50,))
+    pl, pr = reach_point(rig, 1)
+    mid = (pl + pr) / 2
+    lap = laptop(M); lap.scale = (1.6, 1.6, 1.6)
+    keys_top = Vector((mid.x, mid.y + 0.04, mid.z - STANDOFF * 0.9))
+    lap.location = keys_top - Vector((0, 0.02 * 1.6, 0.022 * 1.6))
+    bind_to(rig, lap, 'root')
+    typing(rig, 'blog', keys_top, 0.17)
+    B.stash(rig, act, 'blog')
+    return [lap]
+
+
+def keyboard(M):
+    kb = rbox('TermKeys', (0.62, 0.24, 0.06), 0.02, M['cream'])
+    keys = rbox('TermKeyTops', (0.54, 0.16, 0.012), 0.004, M['paper']); keys.location.z = 0.036
+    return group('Keyboard', [kb, keys])
+
+
+def scene_404(rig, M):
+    """Sitting at a little retro terminal, typing on its keyboard, then turning to the viewer: oh."""
+    act = B.new_action(rig, '404')
+    for f in (1, N + 1): sit(rig, f)
+    for f, x, z in ((1, 6, 6), (48, 6, 6), (56, -4, -16), (86, -4, -16), (N + 1, 6, 6)):
+        B.joint(rig, 'head', f, x=x, z=z)
+    for f in range(1, N + 2, 4): breathe(rig, f)
+    pl, pr = reach_point(rig, 1)
+    mid = (pl + pr) / 2
+    kb = keyboard(M); kb.scale = (1.3, 1.3, 1.3)
+    keys_top = Vector((mid.x, mid.y + 0.02, mid.z - STANDOFF * 0.9))
+    kb.location = keys_top - Vector((0, 0, 0.042 * 1.3))
+    bind_to(rig, kb, 'root')
+    t = terminal(M)
+    for o in list(t.children):
+        if o.name.startswith('TermKey'): bpy.data.objects.remove(o)
+    t.scale = (1.4, 1.4, 1.4); t.location = (mid.x - 0.9, mid.y - 0.35, 0.36); t.rotation_euler = (0, 0, math.radians(32))
+    bind_to(rig, t, 'root')
+    typing(rig, '404', keys_top, 0.17)
+    # He stops typing to turn to the viewer: lift the mittens a little while he looks.
+    B.stash(rig, act, '404')
+    return [t, kb]
+
+
+def scene_essay(rig, M):
+    """Sitting, an open book in both mittens with its pages toward him; small nods as he reads."""
+    act = B.new_action(rig, 'essay')
+    for f in (1, N + 1): sit(rig, f)
+    for f, x in ((1, 9), (24, 10), (48, 8), (72, 10), (N + 1, 9)):
+        B.joint(rig, 'head', f, x=x)
+    for f in range(1, N + 2, 4): breathe(rig, f)
+    blink((60,))
+    bk = book_open(M, 'navy'); bk.scale = (1.7, 1.7, 1.7)
+    bpy.context.scene.frame_set(1); bpy.context.view_layer.update()
+    sh = [rig.matrix_world @ rig.pose.bones[f'arm_upper.{s}'].head for s in 'LR']
+    c = (0, front_y(0.6) - 0.5, (sh[0].z + sh[1].z) / 2 + 0.05)
+    BOOK = (c, (-35, 0, 180))                            # pages toward him, tilted up to his eyes
+    BOOK2 = ((c[0], c[1], c[2] + 0.02), (-33, 0, 180))
+    w = 0.42                                             # the outer bottom corners, in the book's frame
+    held(rig, 'essay', bk, [(1, BOOK), (48, BOOK2), (N + 1, BOOK)],
+         {'L': ((-w, 0, -0.25), (-0.6, 0, -0.8)), 'R': ((w, 0, -0.25), (0.6, 0, -0.8))}, curl=28, hug=24)
+    B.stash(rig, act, 'essay')
+    return [bk]
+
+
+def scene_rotation_empty(rig, M):
+    """Carrying a stack of books against his chest, a mitten on each side; it sways with his weight."""
+    act = B.new_action(rig, 'rotation_empty')
+    for f in range(1, N + 2, 4):
+        s = math.sin(2 * math.pi * (f - 1) / N)
+        B.key_body(rig, f, lean_y=1.2 * s); breathe(rig, f)
+    for f, x, z in ((1, 2, -4), (48, 3, 4), (N + 1, 2, -4)): B.joint(rig, 'head', f, x=x, z=z)
+    st = book_stack(M); st.scale = (1.7, 1.7, 1.7)
+    zs = shoulder_z(); yf = front_y(0.66)
+    track = [(f, ((0.02 * math.sin(2 * math.pi * (f - 1) / N), yf - 0.36, zs - 0.18), (0, 2 * math.sin(2 * math.pi * (f - 1) / N), 0)))
+             for f in range(1, N + 2, 12)]
+    held(rig, 'rotation_empty', st, track, {'L': ((0.25, 0, 0.08), (1, 0, 0)), 'R': ((-0.25, 0, 0.08), (-1, 0, 0))}, curl=26, hug=26)
+    B.stash(rig, act, 'rotation_empty')
+    return [st]
+
+
+def headphones(M):
+    """Fitted to his dome: the band follows the shell's own curve a little above it, the cups sit on
+    the sides at eye height. Built in the body's frame (z = height above the ground)."""
+    zc = B.ZT - 0.33 * B.BODY_H
+    def hw_at(z): return B.half_width((B.ZT - z) / B.BODY_H * 125)
+    cups = []
+    for sx in (1, -1):
+        x = hw_at(zc) + 0.05
+        c = cyl(f'Cup{sx}', 0.17, 0.11, M['graphite'], bevel=0.03); c.rotation_euler = (0, math.radians(90), 0)
+        c.location = (sx * (x + 0.05), 0, zc); cups.append(c)
+        pad = ball(f'Pad{sx}', 0.15, M['graphite'], (0.4, 1, 1)); pad.location = (sx * x, 0, zc); cups.append(pad)
+    # Offset the dome's own profile outward along its normal, so the band hugs it evenly over the top.
+    zs_ = np.linspace(zc + 0.12, B.ZT, 40)
+    prof = [(hw_at(z), z) for z in zs_] + [(0.0, B.ZT)]
+    pts = []
+    for i in range(len(prof)):
+        x0, z0 = prof[max(0, i - 1)]; x1, z1 = prof[min(len(prof) - 1, i + 1)]
+        tx, tz = x1 - x0, z1 - z0; L = math.hypot(tx, tz) or 1
+        nx, nz = tz / L, -tx / L                                   # outward (to +x, up)
+        if nx < 0: nx, nz = -nx, -nz
+        pts.append((prof[i][0] + 0.05 * nx, 0, prof[i][1] + 0.05 * nz))
+    pts[-1] = (0.0, 0, B.ZT + 0.05)
+    band_pts = pts + [(-x, y, z) for x, y, z in reversed(pts[:-1])]
+    band = tube('Band', band_pts, 0.05, M['graphite'])
+    return group('Headphones', cups + [band])
+
+
+def scene_rotation(rig, M):
+    """Headphones on, eyes shut, bobbing to the beat (96 bpm: a beat every 15 frames)."""
+    act = B.new_action(rig, 'rotation')
+    beat = 15
+    for f in range(1, N + 2, 3):
+        ph = ((f - 1) % beat) / beat
+        nod = 3.5 * math.exp(-((ph - 0.1) / 0.18) ** 2)
+        sway = math.sin(2 * math.pi * (f - 1) / (2 * beat * 3.2))
+        B.joint(rig, 'head', f, x=nod, y=2.5 * sway)
+        B.key_body(rig, f, lean_y=1.5 * sway, bob=-0.01 * math.exp(-((ph - 0.12) / 0.2) ** 2))
+        for side, sx in (('L', 1), ('R', -1)):
+            hold(rig, f, side, out=4 + 2 * sway * sx, fwd=4 * sway * sx)
+    B.stash(rig, act, 'rotation')
+    B.use_move('rotation'); bpy.context.scene.frame_set(1)
+    hp = headphones(M)
+    bind_to(rig, hp, 'head')
+    return [hp]
+
 
 
 SCENES = {   # name: (builder, face, camera view)
