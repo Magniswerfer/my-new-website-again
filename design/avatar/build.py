@@ -511,7 +511,7 @@ def stash(rig, act, name):
     trk = rig.animation_data.nla_tracks.new(); trk.name = name; trk.strips.new(name, 1, act); trk.mute = True
 
 
-def walk(rig, legs, T=28, S=0.58, lift=0.14):
+def walk(rig, legs, T=28, S=0.58, lift=0.08):
     """A travelling walk, T = 28 frames for left + right at 24 fps.
 
     Frame 1 contact (left foot down ahead, shell between the feet, moving left), 4 down (left takes the
@@ -681,7 +681,7 @@ def start_stop_turn(rig, legs, S=0.58):
     # Start: weight onto the right foot, the left steps out; ends on the walk's frame 1, root at -half.
     steps(rig, legs, 'walk_start', 20,
           root=[(1, (0, 0, 0)), (8, (0, 0, 0)), (20, (0, -half, 0))],
-          feet={'L': [(1, (L0[0], L0[1], 0, 0, 0)), (7, (L0[0], L0[1], 0, 0, 10)), (13, (L0[0], -half * 1.1, 0, 0.12, 0)),
+          feet={'L': [(1, (L0[0], L0[1], 0, 0, 0)), (7, (L0[0], L0[1], 0, 0, 10)), (13, (L0[0], -half * 1.1, 0, 0.07, 0)),
                       (19, (L0[0], L0[1] - 2 * half, 0, 0, -8)), (20, (L0[0], L0[1] - 2 * half, 0, 0, -8))],
                 'R': [(1, (R0[0], R0[1], 0, 0, 0)), (20, (R0[0], R0[1], 0, 0, 0))]},
           shell=[(1, (0, 0, 0, 0)), (7, (-0.04, -0.2 * A, -3, 1)), (14, (-0.03, 0.4 * A, -2, 3)), (20, (0.0, -0.25 * A, 0, 4))],
@@ -692,7 +692,7 @@ def start_stop_turn(rig, legs, S=0.58):
     steps(rig, legs, 'walk_stop', 26,
           root=[(1, (0, 0, 0)), (12, (0, -half, 0)), (26, (0, -half, 0))],
           feet={'L': [(1, (L0[0], yL, 0, 0, -8)), (4, (L0[0], yL, 0, 0, 0)), (26, (L0[0], yL, 0, 0, 0))],
-                'R': [(1, (R0[0], yR, 0, 0, 10)), (4, (R0[0], yR, 0, 0.02, 14)), (8, (R0[0], (yR + yL) / 2, 0, 0.09, 4)),
+                'R': [(1, (R0[0], yR, 0, 0, 10)), (4, (R0[0], yR, 0, 0.02, 14)), (8, (R0[0], (yR + yL) / 2, 0, 0.06, 4)),
                       (12, (R0[0], yL, 0, 0, -5)), (14, (R0[0], yL, 0, 0, 0)), (26, (R0[0], yL, 0, 0, 0))]},
           shell=[(1, (0.02, -0.25 * A, 1, 4)), (8, (0.03, 0.3 * A, 2, 3)), (12, (0, -0.2 * A, 0, 2)),
                  (15, (0, -0.7 * A, 0, 1)), (20, (0, 0.1 * A, 0, 0)), (26, (0, 0, 0, 0))],
@@ -703,11 +703,11 @@ def start_stop_turn(rig, legs, S=0.58):
     L45, R90, L90 = foot_rest('L', 45), foot_rest('R', 90), foot_rest('L', 90)
     steps(rig, legs, 'turn', 36,
           root=[(1, (0, 0, 0)), (5, (0, 0, 0)), (15, (0, 0, 45)), (27, (0, 0, 90)), (36, (0, 0, 90))],
-          feet={'L': [(1, (L0[0], L0[1], 0, 0, 0)), (6, (L0[0], L0[1], 0, 0, 8)), (10, ((L0[0] + L45[0]) / 2, (L0[1] + L45[1]) / 2, 22, 0.1, 0)),
+          feet={'L': [(1, (L0[0], L0[1], 0, 0, 0)), (6, (L0[0], L0[1], 0, 0, 8)), (10, ((L0[0] + L45[0]) / 2, (L0[1] + L45[1]) / 2, 22, 0.07, 0)),
                       (14, (L45[0], L45[1], 45, 0, -6)), (15, (L45[0], L45[1], 45, 0, 0)), (28, (L45[0], L45[1], 45, 0, 0)),
                       (31, ((L45[0] + L90[0]) / 2, (L45[1] + L90[1]) / 2, 68, 0.05, 0)), (34, (L90[0], L90[1], 90, 0, 0)),
                       (36, (L90[0], L90[1], 90, 0, 0))],
-                'R': [(1, (R0[0], R0[1], 0, 0, 0)), (17, (R0[0], R0[1], 0, 0, 8)), (21, ((R0[0] + R90[0]) / 2, (R0[1] + R90[1]) / 2, 45, 0.1, 0)),
+                'R': [(1, (R0[0], R0[1], 0, 0, 0)), (17, (R0[0], R0[1], 0, 0, 8)), (21, ((R0[0] + R90[0]) / 2, (R0[1] + R90[1]) / 2, 45, 0.07, 0)),
                       (26, (R90[0], R90[1], 90, 0, -6)), (27, (R90[0], R90[1], 90, 0, 0)), (36, (R90[0], R90[1], 90, 0, 0))]},
           shell=[(1, (0, 0, 0, 0)), (5, (-0.04, -0.2 * A, -3, 1)), (12, (-0.01, 0.3 * A, -1, 2)), (16, (0.04, -0.4 * A, 3, 2)),
                  (22, (0.03, 0.3 * A, 2, 2)), (27, (0, -0.4 * A, 0, 1)), (31, (-0.015, 0, -1, 0)), (36, (0, 0, 0, 0))],
@@ -996,13 +996,16 @@ def build(pose='front', with_anims=True):
         lo.use_connect = True
         hp = Vector((sx * LEG['x'], LEG['y'], Z0 + 0.12))
         ha = eb.new(f'hip_attach.{s_}'); ha.head = hp; ha.tail = hp + Vector((0, 0, 0.15)); ha.parent = hb_; ha.use_deform = False
-        hb = eb.new(f'hip.{s_}'); hb.head = hp; hb.tail = Vector((hp.x, hp.y, 0.3)); hb.parent = ha
+        hb = eb.new(f'hip.{s_}'); hb.head = hp; hb.tail = Vector((hp.x, hp.y, 0.02)); hb.parent = ha   # reaches the sole
         fb = eb.new(f'foot.{s_}'); fb.head = Vector((hp.x, hp.y, 0.02)); fb.tail = Vector((hp.x, hp.y - 0.25, 0.02)); fb.parent = root
     bpy.ops.object.mode_set(mode='OBJECT')
     for pb in rig.pose.bones: pb.rotation_mode = 'QUATERNION'
     for s_ in 'LR':
-        c = rig.pose.bones[f'hip.{s_}'].constraints.new('DAMPED_TRACK')
-        c.target = rig; c.subtarget = f'foot.{s_}'; c.track_axis = 'TRACK_Y'; c.influence = 0.8
+        # No knees: the leg is one straight stub from hip to foot. It stretches to reach its foot,
+        # keeping its volume (so it leans and squashes a little, never bends backwards).
+        c = rig.pose.bones[f'hip.{s_}'].constraints.new('STRETCH_TO')
+        c.target = rig; c.subtarget = f'foot.{s_}'; c.volume = 'VOLUME_XZX'; c.bulge = 1.0
+        c.use_bulge_max = True; c.bulge_max = 1.06; c.use_bulge_min = True; c.bulge_min = 0.95
 
     def bind(ob, bone):
         mw = ob.matrix_world.copy()
