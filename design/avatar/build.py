@@ -337,8 +337,10 @@ def build(pose='front'):
             # clearly above the shell to catch a highlight.
             D = 0.016
             loc, nor = surface(body, sx * F['eye_x'], eye_s)
-            feats.append(dict(kind='ellipse', frame=frame(loc, nor), a=ew / 2 + 0.0035, b=eh / 2 + 0.0035, depth=D, rho=0.0035))
-            e = sphere('Eye', ew / 2, eh / 2, ew * 0.26, M['gloss'])
+            # A pill (racetrack): straight sides, round ends, domed face; its pocket is the same pill.
+            feats.append(dict(kind='slot', frame=frame(loc, nor, spin=math.pi / 2), half=(eh - ew) / 2,
+                              r=ew / 2 + 0.0035, depth=D, rho=0.0035))
+            e = capsule('Eye', ew, eh, ew * 0.52, segs=64); e.data.materials.append(M['gloss']); parts.append(e)
             orient(e, loc, nor, lift=-D - 0.003)
     if face == 'smile':
         T = 1.2
