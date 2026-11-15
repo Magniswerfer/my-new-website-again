@@ -933,11 +933,72 @@ def scene_rotation(rig, M):
 
 
 
+def controller(M):
+    """A chunky gamepad: a rounded body, two grips angled down, a d-pad, two thumbsticks and four
+    face buttons. Built facing up (+z), its front edge toward -y."""
+    body = rbox('PadBody', (0.62, 0.3, 0.12), 0.05, M['graphite'], segs=6)
+    parts = [body]
+    for sx in (1, -1):
+        g = ball(f'PadGrip{sx}', 0.13, M['graphite'], (1.0, 1.35, 0.85))
+        g.location = (sx * 0.27, 0.12, -0.03); g.rotation_euler = (0, 0, math.radians(sx * -18)); parts.append(g)
+        st = cyl(f'Stick{sx}', 0.045, 0.05, M['graphite'], bevel=0.01); st.location = (sx * 0.1, 0.05, 0.08); parts.append(st)
+        cap = ball(f'StickCap{sx}', 0.05, M['metal'], (1, 1, 0.45)); cap.location = (sx * 0.1, 0.05, 0.105); parts.append(cap)
+    for (sx, sy) in ((0.075, 0.025), (0.025, 0.075)):
+        d = rbox('Dpad', (sx, sy, 0.02), 0.006, M['paper'], segs=2); d.location = (-0.19, -0.04, 0.065); parts.append(d)
+    for (bx, by, c) in ((0.19, -0.08, 'prompt'), (0.19, 0.0, 'orange'), (0.15, -0.04, 'navy'), (0.23, -0.04, 'paper')):
+        bt = cyl('Btn', 0.018, 0.02, M[c], verts=24); bt.location = (bx, by, 0.065); parts.append(bt)
+    return group('Controller', parts)
+
+
+def headset(M):
+    """The headphones plus a mic boom from his left cup round to the corner of his mouth."""
+    hp = headphones(M)
+    zc = B.ZT - 0.33 * B.BODY_H
+    x0 = B.half_width((B.ZT - zc) / B.BODY_H * 125) + 0.1
+    # From the bottom of his left cup, down and round his cheek, just clear of the shell, ending by the
+    # corner of his mouth, below his eye.
+    def on(x, s_, out=0.07):
+        hw = B.half_width(s_ * 125); y = -math.sqrt(max(0.0, hw * hw - x * x)) * B.DEPTH
+        n = Vector((x, y / B.DEPTH, 0)).normalized()
+        return tuple(Vector((x, y, B.ZT - s_ * B.BODY_H)) + n * out)
+    pts = [(x0, -0.02, zc - 0.14), on(0.86, 0.4), on(0.62, 0.43), on(0.36, 0.42, 0.06)]
+    boom = tube('MicBoom', pts, 0.022, M['graphite'])
+    mic = ball('Mic', 0.05, M['graphite'], (1.2, 1, 1)); mic.location = pts[-1]
+    boom.parent = hp; mic.parent = hp
+    return hp
+
+
+def scene_gaming(rig, M):
+    """For a Discord avatar: headset on, controller in both mittens; thumbs tapping, a little lean as
+    he dodges something on screen and back, a blink. 4 s, loops."""
+    act = B.new_action(rig, 'gaming')
+    for f in range(1, N + 2, 4): breathe(rig, f)
+    lean = [(1, 0), (34, 0), (42, -4), (50, -5), (58, 1.5), (66, 0), (N + 1, 0)]
+    for f, y in lean:
+        B.key_body(rig, f, lean_y=y, lean_x=2)
+        B.joint(rig, 'head', f, x=7 + (2 if 40 < f < 60 else 0), y=-0.6 * y)
+    blink((80,))
+    pad = controller(M); pad.scale = (1.45, 1.45, 1.45)
+    zs = shoulder_z(); yf = front_y(0.66)
+    def at(f):
+        y = B.smooth_track(lean, f)
+        tap = 0.012 * math.sin(2 * math.pi * f / 6) * (0 if 40 < f < 62 else 1)
+        return ((0.03 * y / -5, yf - 0.42, zs - 0.12 + tap), (-38, 2.5 * y, 0))
+    track = [(f, at(f)) for f in range(1, N + 2, 2)]
+    held(rig, 'gaming', pad, track, {'L': ((0.4, 0.17, -0.02), (0.8, 0.2, -0.55)), 'R': ((-0.4, 0.17, -0.02), (-0.8, 0.2, -0.55))},
+         curl=30, hug=24, step=2)
+    B.stash(rig, act, 'gaming')
+    B.use_move('gaming'); bpy.context.scene.frame_set(1)
+    hs = headset(M); bind_to(rig, hs, 'head')
+    return [pad, hs]
+
+
 SCENES = {   # name: (builder, face, camera view)
     'weeks': (scene_weeks, 'sip'), 'blog': (scene_blog, 'muse'), 'projects': (scene_projects, 'muse'),
     'photos': (scene_photos, 'wink'), 'rotation': (scene_rotation, 'content'), 'contact': (scene_contact, 'muse'),
     '404': (scene_404, 'surprised'), 'empty': (scene_empty, 'happy'), 'essay': (scene_essay, 'muse'),
     'sent': (scene_sent, 'happy'), 'rotation_empty': (scene_rotation_empty, 'smile'),
+    'gaming': (scene_gaming, 'smile'),
 }
 
 
