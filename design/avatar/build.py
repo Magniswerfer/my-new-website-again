@@ -719,28 +719,27 @@ BLINK = ((1, 0), (71, 0), (73, 1), (74, 1), (78, 0), (97, 0))   # frame, how clo
 
 
 def idle(rig):
-    """A 96-frame (4 s) idle loop that begins and ends at rest, so any move can start from it.
-    Breathing (two slow breaths, a hint of stretch on the in-breath), a small weight shift from foot
-    to foot, a curious look toward the viewer with a moving hold, a little head tilt, arms drifting a
+    """A 96-frame (4 s) idle loop that begins and ends at rest, so any move can start from it. Calm:
+    one slow breath (a hint of stretch on the in-breath), a small weight shift from foot to foot, a curious look toward the viewer with a moving hold, a little head tilt, arms drifting a
     beat behind the body, and one blink (fast close, slower open)."""
     act = new_action(rig, 'idle'); N = 96
     pb = rig.pose.bones; body = pb['body']
     for f in range(1, N + 2):
         t = (f - 1) / N
-        breath = math.sin(2 * math.pi * 2 * t)                       # two breaths per loop
-        shift = math.sin(2 * math.pi * t)                            # one weight shift each way
-        squash_body(body, 1 + 0.012 * max(0.0, breath) - 0.004 * max(0.0, -breath))
-        body.rotation_quaternion = wq(body, Matrix.Rotation(math.radians(1.2 * shift), 3, 'Y'))
-        bone_loc(body, (0.012 * shift, 0, 0.006 * breath))
+        breath = math.sin(2 * math.pi * t)                           # one slow breath per loop
+        shift = math.sin(2 * math.pi * t)                            # one gentle weight shift each way
+        squash_body(body, 1 + 0.008 * max(0.0, breath) - 0.003 * max(0.0, -breath))
+        body.rotation_quaternion = wq(body, Matrix.Rotation(math.radians(0.6 * shift), 3, 'Y'))
+        bone_loc(body, (0.006 * shift, 0, 0.004 * breath))
         key(body, f, scale=True)
-        joint(rig, 'hips', f, y=-0.6 * shift)
+        joint(rig, 'hips', f, y=-0.3 * shift)
         # Look toward the viewer and hold (moving hold), tilt, then come back.
         look = smooth_track([(1, 0.0), (22, 0.0), (32, 1.0), (54, 1.08), (64, 0.0), (97, 0.0)], f)
         tilt = smooth_track([(1, 0.0), (40, 0.0), (48, 1.0), (60, 1.0), (70, 0.0), (97, 0.0)], f)
-        joint(rig, 'head', f, x=-1.5 * look + 0.6 * breath, y=4 * tilt, z=-7 * look)
+        joint(rig, 'head', f, x=-1.0 * look + 0.4 * breath, y=2.5 * tilt, z=-5 * look)
         drag = math.sin(2 * math.pi * (t - 0.04))                    # arms a beat behind the shift
         for s_, sx in (('L', 1), ('R', -1)):
-            key_arm(rig, s_, f, out=1.5 + 1.2 * math.sin(2 * math.pi * 2 * (t - 0.03)), fwd=1.5 * sx * drag)
+            key_arm(rig, s_, f, out=1.5 + 0.7 * math.sin(2 * math.pi * (t - 0.03)), fwd=0.8 * sx * drag)
     # One blink, close in 2 frames and open in 4; the sockets close with the eyes.
     for ob, kn in [(o, 'closed') for o in EYES] + [(o, 'blink') for o in BODY]:
         sk = ob.data.shape_keys.key_blocks[kn]
@@ -750,18 +749,18 @@ def idle(rig):
     stash(rig, act, 'idle')
 
 
-def walk_in(rig, legs, view=-18.0, D=3.0, F=12, swing=8, toward=24.0):
+def walk_in(rig, legs, view=-18.0, D=3.0, F=12, swing=8, cheat=25.0):
     """Walk in from the right of the frame toward the page's text, a last short step, turn to face the
     viewer (the head leads), and end exactly at rest so the idle can follow.
     `view` is the rig's turn in the hero render; the path is laid out so it runs straight across the
     screen (world -x) from D units to the right."""
     A = 0.025 * BODY_H
     a = math.radians(view)
-    # Screen-left and a little toward the camera, so he walks in three-quarter to the viewer.
-    w = Vector((-math.cos(math.radians(toward)), -math.sin(math.radians(toward)), 0))
-    travel = Matrix.Rotation(-a, 3, 'Z') @ w
+    # Straight across the screen (world -x), at a constant distance from the camera so he doesn't
+    # change size; his body is cheated `cheat` degrees toward the camera so his face stays readable.
+    travel = Matrix.Rotation(-a, 3, 'Z') @ Vector((-1, 0, 0))
     yaw = math.degrees(math.atan2(-travel.x, travel.y)) + 180    # facing along the travel
-    yaw = (yaw + 180) % 360 - 180
+    yaw = (yaw + 180) % 360 - 180 + cheat
     start = -travel * D
     n = int(round(D / 0.5))                                      # steps of about 0.5
     t_walk = 1 + n * F                                           # last walking step lands here
