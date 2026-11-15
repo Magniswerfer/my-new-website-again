@@ -513,20 +513,18 @@ def scene_essay(rig, M):
 
 
 def scene_sent(rig, M):
-    """Message sent: a lightbulb lights above his raised mitten, and he beams."""
+    """Message sent: he holds a lit lightbulb up beside his head by its base, and beams. It bobs up
+    a little on each beat of pride, held the whole time (nothing floats)."""
     act = B.new_action(rig, 'sent')
-    for f, out, fwd in ((1, 120, 20), (20, 128, 20), (48, 120, 20), (70, 126, 20), (N + 1, 120, 20)):
-        hold(rig, f, 'L', out=out, fwd=fwd, curl=10, slide=10)
     for f in (1, N + 1): hold(rig, f, 'R', out=6)
     for f, y in ((1, 4), (48, 6), (N + 1, 4)): B.joint(rig, 'head', f, y=y)
     for f in range(1, N + 2, 4): breathe(rig, f)
+    b = bulb(M); b.scale = (1.6, 1.6, 1.6)
+    zs = shoulder_z(); c = (1.18, -0.32, zs + 0.86)
+    up = lambda dz: ((c[0], c[1], c[2] + dz), (0, -8, 0))
+    track = [(1, up(0)), (20, up(0.06)), (30, up(0)), (60, up(0)), (70, up(0.06)), (80, up(0)), (N + 1, up(0))]
+    held(rig, 'sent', b, track, {'L': ((0.0, 0.0, -0.34), (0.0, 0.0, -1.0))}, curl=34, hug=10)
     B.stash(rig, act, 'sent')
-    B.use_move('sent'); bpy.context.scene.frame_set(1)
-    b = bulb(M); b.scale = (1.6, 1.6, 1.6); b.location = tip(rig, 'L') + Vector((0.02, 0, 0.5))
-    bind_to(rig, b, 'arm_lower.L')
-    obj_action(b, 'sent')
-    for f, s in ((1, 1.0), (24, 1.08), (48, 1.0), (72, 1.08), (N + 1, 1.0)):
-        b.scale = (s, s, s); b.keyframe_insert('scale', frame=f)
     return [b]
 
 
