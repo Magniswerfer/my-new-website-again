@@ -417,8 +417,29 @@ def neutral(rig, frame=1):
         pb.keyframe_insert('scale', frame=frame)
 
 
+LIMBS = []      # arm and leg meshes, set by build(); each move gets its own shape-key action for them
+EYES = []       # eye meshes, for blinks
+
+
 def new_action(rig, name):
-    act = bpy.data.actions.new(name); rig.animation_data.action = act; neutral(rig); return act
+    act = bpy.data.actions.new(name); rig.animation_data.action = act; neutral(rig)
+    for ob in LIMBS:
+        sk = ob.data.shape_keys; sk.animation_data_create()
+        sk.animation_data.action = bpy.data.actions.new(f'{name}|{ob.name}')
+        sk.key_blocks['squash'].value = 0; sk.key_blocks['squash'].keyframe_insert('value', frame=1)
+    return act
+
+
+def use_move(name):
+    """Play a move: the rig's action plus that move's shape-key and eye actions."""
+    rig = bpy.data.objects['Rig']; rig.animation_data.action = bpy.data.actions[name]
+    for ob in LIMBS:
+        sk = ob.data.shape_keys; sk.animation_data_create()
+        sk.animation_data.action = bpy.data.actions.get(f'{name}|{ob.name}')
+        if sk.animation_data.action is None: sk.key_blocks['squash'].value = 0
+    for ob in EYES:
+        ob.animation_data_create(); ob.animation_data.action = bpy.data.actions.get(f'{name}|{ob.name}')
+        if ob.animation_data.action is None: ob.scale = (1, 1, 1)
 
 
 def heel_toe(tilt):
@@ -643,6 +664,37 @@ def start_stop_turn(rig, legs, S=0.58):
           hips_track=[(1, (0, 0, 0)), (8, (0, 0, -6)), (15, (0, 1, 3)), (20, (0, 0, -6)), (27, (0, 0, 2)), (36, (0, 0, 0))])
 
 
+def idle(rig):
+    """A 96-frame (4 s) idle loop that begins and ends at rest, so any move can start from it.
+    Breathing (two slow breaths, a hint of stretch on the in-breath), a small weight shift from foot
+    to foot, a curious look toward the viewer with a moving hold, a little head tilt, arms drifting a
+    beat behind the body, and one blink (fast close, slower open)."""
+    act = new_action(rig, 'idle'); N = 96
+    pb = rig.pose.bones; body = pb['body']
+    for f in range(1, N + 2):
+        t = (f - 1) / N
+        breath = math.sin(2 * math.pi * 2 * t)                       # two breaths per loop
+        shift = math.sin(2 * math.pi * t)                            # one weight shift each way
+        squash_body(body, 1 + 0.012 * max(0.0, breath) - 0.004 * max(0.0, -breath))
+        body.rotation_quaternion = wq(body, Matrix.Rotation(math.radians(1.2 * shift), 3, 'Y'))
+        bone_loc(body, (0.012 * shift, 0, 0.006 * breath))
+        key(body, f, scale=True)
+        joint(rig, 'hips', f, y=-0.6 * shift)
+        # Look toward the viewer and hold (moving hold), tilt, then come back.
+        look = smooth_track([(1, 0.0), (22, 0.0), (32, 1.0), (54, 1.08), (64, 0.0), (97, 0.0)], f)
+        tilt = smooth_track([(1, 0.0), (40, 0.0), (48, 1.0), (60, 1.0), (70, 0.0), (97, 0.0)], f)
+        joint(rig, 'head', f, x=-1.5 * look + 0.6 * breath, y=4 * tilt, z=-7 * look)
+        drag = math.sin(2 * math.pi * (t - 0.04))                    # arms a beat behind the shift
+        for s_, sx in (('L', 1), ('R', -1)):
+            key_arm(rig, s_, f, out=1.5 + 1.2 * math.sin(2 * math.pi * 2 * (t - 0.03)), fwd=1.5 * sx * drag)
+    for ob in EYES:                                                  # one blink: close in 2, open in 4
+        ob.animation_data_create(); ob.animation_data.action = bpy.data.actions.new(f'idle|{ob.name}')
+        for f, k in ((1, 1), (71, 1), (73, 0.08), (74, 0.08), (78, 1), (97, 1)):
+            ob.scale = (1, k, 1); ob.keyframe_insert('scale', frame=f)
+        ob.animation_data.action = None; ob.scale = (1, 1, 1)
+    stash(rig, act, 'idle')
+
+
 def animations(rig, arms, legs=None):
     """Wave and reach, at 24 fps, stashed as NLA strips so the GLB carries both."""
     for pb in rig.pose.bones: pb.rotation_mode = 'QUATERNION'
@@ -691,7 +743,7 @@ def animations(rig, arms, legs=None):
         for fr, v in ((1, 0), (21, 0), (25, 0.8), (44, 0.8), (50, 0), (64, 0)):
             sk.value = v; sk.keyframe_insert('value', frame=fr)
     if legs:
-        walk(rig, legs); jump(rig, legs); start_stop_turn(rig, legs)
+        walk(rig, legs); jump(rig, legs); start_stop_turn(rig, legs); idle(rig)
     for pb in rig.pose.bones:                         # back to rest once the moves are built
         pb.location = (0, 0, 0); pb.rotation_quaternion = (1, 0, 0, 0); pb.scale = (1, 1, 1)
     for ob in arms + (list(legs.values()) if legs else []):
@@ -842,11 +894,13 @@ def build(pose='front', with_anims=True):
         ob = arms[s_]; ob.parent = rig; ob.parent_type = 'OBJECT'
         md = ob.modifiers.new('Armature', 'ARMATURE'); md.object = rig
 
+    LIMBS[:] = list(arms.values()) + list(legs.values())
+    EYES[:] = [o for o in parts if o.name.startswith('Eye') and not o.name.startswith(('EyeL', 'EyeP'))]
     if with_anims:
         animations(rig, list(arms.values()), legs)
     if 'anim' in P:
         name, fr = P['anim']
-        rig.animation_data.action = bpy.data.actions[name]
+        use_move(name)
         bpy.context.scene.frame_set(fr)
     if P.get('sit'):
         # Sit: body down, hips slid forward, each leg swung forward from the hip with its foot carried
@@ -928,7 +982,7 @@ def stage(yaw, elev=8.0, size=700, samples=48, dark=True, lens=100, dist=13.0, t
 if __name__ == '__main__':
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:]
     ap = argparse.ArgumentParser()
-    ap.add_argument('--frame', type=int); ap.add_argument('--anim');
+    ap.add_argument('--frame', type=int); ap.add_argument('--anim'); ap.add_argument('--step', type=int, default=1); ap.add_argument('--first', type=int, default=1); ap.add_argument('--last', type=int, default=0);
     ap.add_argument('--pose', default='front'); ap.add_argument('--view', type=float, default=0)
     ap.add_argument('--elev', type=float, default=3); ap.add_argument('--lens', type=float, default=100)
     ap.add_argument('--dist', type=float, default=13); ap.add_argument('--size', type=int, default=700)
@@ -946,10 +1000,9 @@ if __name__ == '__main__':
         stage(a.view, a.elev, a.size, a.samples, dark=not a.light, lens=a.lens, dist=a.dist, target=a.target)
         sc = bpy.context.scene; rig = bpy.data.objects['Rig']
         if a.anim:   # render frames of an animation: --anim wave --frame N (one) or all, every 2nd
-            rig.animation_data.action = bpy.data.actions[a.anim]
-            for ob in bpy.data.objects:
-                if ob.name.startswith('Arm.') and ob.data.shape_keys and ob.data.shape_keys.animation_data is None: pass
-            fr = [a.frame] if a.frame else range(1, int(rig.animation_data.action.frame_range[1]) + 1)
+            use_move(a.anim)
+            end = a.last or int(rig.animation_data.action.frame_range[1])
+            fr = [a.frame] if a.frame else range(a.first, end + 1, a.step)
             for f_ in fr:
                 sc.frame_set(f_); sc.render.filepath = a.out.replace('#', f'{f_:03d}')
                 bpy.ops.render.render(write_still=True)

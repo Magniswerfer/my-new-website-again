@@ -119,12 +119,23 @@ A small character stands in for Magnus: a snow-white bean of a robot with three 
 - splits the dark ink marks (ticks, z's) into a separate `-marks` layer;
 - makes a blink frame from the standing pose.
 
-The homepage loop comes from the first sheet, because only that one has a plain standing pose. Every other pose comes from the second sheet. To get sharper images, regenerate a sheet at a higher resolution in the same layout and run the script again.
+Every page pose comes from the second sheet. To get sharper images, regenerate a sheet at a higher resolution in the same layout and run the script again.
 
-`avatar/build.py` is a Blender model of him, built from the turnaround sheet `avatar/reference.png` and rendered with Cycles. The site doesn't use it.
+**The 3D model.** `avatar/build.py` builds him in Blender from the model, body, face, LED and limb reference sheets in `avatar/`. He is rigged:
+- body, neck and hip joints;
+- arms on shoulders that slide round the shell;
+- legs with planted foot controls;
+- squash keys and blinks.
+
+It also builds his moves: idle, wave, walk, start, stop, turn, jump, reach, sit and sleep. **Every animation follows [`avatar/ANIMATION.md`](avatar/ANIMATION.md)**, which applies the Pixar/Disney principles to him.
+
+The homepage plays Blender renders of the model:
+- `build.py` renders the idle (at 12 fps), the wave (24 fps) and the sleep pose;
+- `avatar/sheets.py` packs them into sprite sheets in `public/avatar/`;
+- `HeroAvatar.astro` draws them on a canvas.
 
 **Where he appears.**
-- Homepage hero: alive. He breathes, blinks, waves when pointed at (and once on arrival), and sits down to sleep, with drifting z's, while the footer's motion is stopped.
+- Homepage hero: the rendered 3D model. He idles (breathing, a weight shift, a look at the viewer, a blink), waves when pointed at and once on arrival, and sleeps (eyes closed, LED off) while the footer's motion is stopped. People who prefer reduced motion get a still frame.
 - Page headings, one pose per section:
   - Projects: soldering
   - Blog: laptop
