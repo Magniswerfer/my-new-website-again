@@ -351,7 +351,7 @@ POSES = {
     'reach': {'anim': ('reach', 30), 'ball': True},
     'sleep': {'face': 'closed', 'led': False, 'tilt': (6, 0)},
     'sit': {'sit': True},
-    'walk': {'anim': ('walk', 10)},
+    'walk': {'anim': ('walk', 8)},
     'jump': {'anim': ('jump', 7)},
     'surprised': {'face': 'o'},
 }
@@ -407,59 +407,76 @@ def stash(rig, act, name):
     trk = rig.animation_data.nla_tracks.new(); trk.name = name; trk.strips.new(name, 1, act); trk.mute = True
 
 
-def walk(rig, legs, T=28, S=0.42, lift=0.11):
-    """A walk cycle, T frames for left + right. Each foot stands for 16 frames (fixed in the world while
-    the body travels over it) and swings for 12 in a low arc, so both feet touch during each weight
-    transfer. The body moves forward S per step, sways toward the supporting foot and bobs; the hips
-    slide a little with the swinging leg; the arms swing opposite."""
+def walk(rig, legs, T=28, S=0.58, lift=0.14):
+    """A travelling walk, T = 28 frames for left + right at 24 fps.
+
+    Frame 1 contact (left foot down ahead, shell between the feet, moving left), 4 down (left takes the
+    weight, shell lowest, right foot releases), 8 passing (right swings past, shell over the left foot,
+    rising), 12 up (shell highest, left rolls to its front edge), 15 the same on the right, 29 = frame 1
+    one stride on. Feet hold their world position from contact to push-off. The shell leans forward a
+    little, shifts and tilts toward the supporting foot, and travels ~2.5% of its height up and down."""
     act = bpy.data.actions.new('walk'); rig.animation_data.action = act
     pb = rig.pose.bones; root, body = pb['root'], pb['body']
-    STANCE, SWING = 16, 12; v = S / (T / 2); half = v * STANCE / 2
+    STANCE = 17; SWING = T - STANCE
+    v = S / (T / 2); half = v * STANCE / 2
+    A = 0.025 * BODY_H                              # vertical travel, lowest to highest
+    BOB = {0: -0.25, 3: -0.5, 7: 0.05, 11: 0.5, 14: -0.25}   # in units of A, over half a cycle
+    contact = {'L': 0, 'R': T // 2}
     for f in range(1, T + 2):
         t = f - 1
         bone_loc(root, (0, -v * t, 0)); key(root, f, rot=False)
         rels = {}
-        for side, off in (('L', 0), ('R', T // 2)):
-            p = (t + off) % T
+        for side in 'LR':
+            w = (t - contact[side]) % T
             foot, hip = pb[f'foot.{side}'], pb[f'hip_attach.{side}']
-            if p < SWING:                       # swing: a low arc forward, landing with the toe up a touch
-                u = p / SWING; e = u * u * (3 - 2 * u)
+            if w < STANCE:                          # planted: settle, carry the weight, roll onto the front
+                k = w / STANCE
+                rel = -half + 2 * half * k
+                tilt = -8 * max(0.0, 1 - w / 3) + 16 * max(0.0, (w - 12) / 5)    # toe up on landing; heel up at push-off
+                z = 0.03 * max(0.0, (w - 12) / 5)
+                squash = max(0.0, 1 - abs(w - 3) / 4) + 0.2 * (3 < w < 12)       # compress most at 'down'
+            else:                                   # swing: a short, low arc forward
+                u = (w - STANCE) / SWING; e = u * u * (3 - 2 * u)
                 rel = half - 2 * half * e; z = lift * math.sin(math.pi * u)
-                tilt = 10 * math.sin(math.pi * min(1.0, u * 2)) * (u < 0.5) - 8 * max(0.0, (u - 0.6) / 0.4)
+                tilt = 16 * (1 - u) ** 2 - 8 * max(0.0, (u - 0.6) / 0.4)
                 squash = 0.0
-            else:                               # stance: planted; settle, then roll onto the front
-                w = (p - SWING) / STANCE
-                rel = -half + 2 * half * w
-                tilt = -8 * max(0.0, 1 - w * 6) + 14 * max(0.0, (w - 0.78) / 0.22)
-                z = 0.02 * max(0.0, (w - 0.78) / 0.22)
-                squash = max(0.8 * max(0.0, 1 - abs(w - 0.08) / 0.2), 0.25 if 0.1 < w < 0.75 else 0.0)
             rels[side] = rel
             bone_loc(foot, (0, rel, z))
             foot.rotation_quaternion = wq(foot, Matrix.Rotation(math.radians(tilt), 3, 'X'))
             key(foot, f)
-            bone_loc(hip, (0, -0.35 * rel, 0)); key(hip, f, rot=False)
-            sk = legs[side].data.shape_keys.key_blocks['squash']; sk.value = squash; sk.keyframe_insert('value', frame=f)
-        sway = math.cos(2 * math.pi * (t - 20) / T)          # +1 over the left foot
-        body.rotation_quaternion = wq(body, Matrix.Rotation(math.radians(3 * sway), 3, 'Y'))
-        bone_loc(body, (0.025 * sway, 0, -0.018 * (0.5 + 0.5 * math.cos(2 * math.pi * (t - 13) / (T / 2)))))
+            bone_loc(hip, (0, -0.3 * rel, 0)); key(hip, f, rot=False)      # the hip helps the reach
+            sk = legs[side].data.shape_keys.key_blocks['squash']; sk.value = min(1.0, squash); sk.keyframe_insert('value', frame=f)
+        # Shell: lean forward, shift + tilt toward the supporting foot (left until ~frame 15), bob.
+        side_w = math.cos(2 * math.pi * (t - 7) / T)                       # +1 over the left foot at 'passing'
+        hc = t % (T // 2); ks = sorted(BOB)
+        for a_, b_ in zip(ks, ks[1:]):
+            if a_ <= hc <= b_:
+                x = (hc - a_) / (b_ - a_); x = x * x * (3 - 2 * x)
+                bob = (BOB[a_] + (BOB[b_] - BOB[a_]) * x) * A
+        body.rotation_quaternion = wq(body, Matrix.Rotation(math.radians(3 * side_w), 3, 'Y')
+                                      @ Matrix.Rotation(math.radians(4), 3, 'X'))
+        bone_loc(body, (0.035 * side_w, 0, bob))
         key(body, f)
-        for side in 'LR':
-            key_arm(rig, side, f, fwd=11 * rels[side] / half, out=2)
+        for side in 'LR':                            # arms swing opposite the feet
+            key_arm(rig, side, f, fwd=12 * rels[side] / half, out=3)
     stash(rig, act, 'walk')
 
 
 def jump(rig, legs):
-    """Compress both legs, push up together, land on both soles and settle."""
+    """Lower the shell between the feet as the legs compress; raise it as they push off; on landing the
+    feet touch first, then the shell dips and recovers over the next few frames."""
     act = bpy.data.actions.new('jump'); rig.animation_data.action = act
     pb = rig.pose.bones; root, body = pb['root'], pb['body']
-    keys = [(1, 0, 0, 0), (7, 0, -0.07, 0.9), (10, 0.06, 0.02, 0), (16, 0.42, 0.03, 0), (21, 0.06, 0, 0),
-            (23, 0, -0.06, 1.0), (28, 0, 0.012, 0), (32, 0, 0, 0)]
-    for f, rz, bz, sq in keys:
+    #       frame, root z (feet), shell z, leg squash, arms up
+    keys = [(1, 0, 0, 0, 0), (7, 0, -0.08, 1.0, 0), (10, 0.0, 0.05, 0, 1), (12, 0.12, 0.04, 0, 1),
+            (17, 0.42, 0.0, 0, 1), (22, 0.08, 0.03, 0, 1), (24, 0, 0.03, 0.3, 0.5), (27, 0, -0.07, 1.0, 0),
+            (31, 0, 0.012, 0.1, 0), (35, 0, 0, 0, 0)]
+    for f, rz, bz, sq, up in keys:
         bone_loc(root, (0, 0, rz)); key(root, f, rot=False)
         bone_loc(body, (0, 0, bz)); key(body, f, rot=False)
         for side in 'LR':
             sk = legs[side].data.shape_keys.key_blocks['squash']; sk.value = sq; sk.keyframe_insert('value', frame=f)
-            key_arm(rig, side, f, out=(34 if 10 <= f <= 21 else (-4 if sq else 0)), fwd=(8 if 10 <= f <= 21 else 0))
+            key_arm(rig, side, f, out=34 * up - 4 * sq, fwd=8 * up)
     stash(rig, act, 'jump')
 
 
@@ -500,8 +517,8 @@ def animations(rig, arms, legs=None):
         key_arm(rig, side, 44 + lag, out=-4, fwd=49, inward=40, curl=31, hug=33, slide=38)
         key_arm(rig, side, 56 + lag, out=-2, fwd=-3, slide=-4)
         key_arm(rig, side, 62 + lag)
-    key_body(rig, 6, lean_x=2); key_body(rig, 20, lean_x=-6, bob=-0.01); key_body(rig, 26, lean_x=-4.5)
-    key_body(rig, 44, lean_x=-4.5); key_body(rig, 58, lean_x=1); key_body(rig, 64)
+    key_body(rig, 6, lean_x=-2); key_body(rig, 20, lean_x=6, bob=-0.01); key_body(rig, 26, lean_x=4.5)
+    key_body(rig, 44, lean_x=4.5); key_body(rig, 58, lean_x=-1); key_body(rig, 64)
     act.use_fake_user = True
     trk = rig.animation_data.nla_tracks.new(); trk.name = 'reach'; trk.strips.new('reach', 1, act); trk.mute = True
     for ob in arms:                                                       # contact squash on the shape key
@@ -612,7 +629,7 @@ def build(pose='front', with_anims=True):
     bpy.ops.object.mode_set(mode='EDIT')
     eb = arm_data.edit_bones
     root = eb.new('root'); root.head = (0, 0, 0); root.tail = (0, 0.4, 0)
-    b = eb.new('body'); b.head = (0, 0, Z0); b.tail = (0, 0, ZT); b.parent = root
+    b = eb.new('body'); b.head = (0, 0, Z0 + 0.22); b.tail = (0, 0, ZT); b.parent = root   # pivots low, above the hips
     for s_, sx in (('L', 1), ('R', -1)):
         _, pv, d = made[s_]
         at = eb.new(f'attach.{s_}'); at.head = Vector((0, 0, pv.z)); at.tail = Vector((pv.x, pv.y, pv.z)); at.roll = 0
@@ -654,7 +671,7 @@ def build(pose='front', with_anims=True):
         # along (so the stub keeps its shape), feet turned a little outward.
         pb = rig.pose.bones
         bone_loc(pb['body'], (0, 0, -Z0 * 0.86))
-        pb['body'].rotation_quaternion = wq(pb['body'], Matrix.Rotation(math.radians(-5), 3, 'X'))
+        pb['body'].rotation_quaternion = wq(pb['body'], Matrix.Rotation(math.radians(-5), 3, 'X'))   # sits back a touch
         for s_, sx in (('L', 1), ('R', -1)):
             rig.pose.bones[f'hip.{s_}'].constraints[0].mute = True
             bone_loc(pb[f'hip_attach.{s_}'], (0, -0.08, 0))
