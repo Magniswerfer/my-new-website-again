@@ -72,6 +72,7 @@ def mats():
         bulb=mat('Bulb', (1.0, 0.85, 0.5), 0.1, **{'Emission Color': (1.0, 0.75, 0.35, 1), 'Emission Strength': 6.0,
                                                     'Transmission Weight': 0.3}),
         ink=bpy.data.materials['Ink'],
+        wood=mat('Walnut', (0.22, 0.12, 0.06), 0.45, **{'Coat Weight': 0.3}),
         lens=mat('Lens', (0.02, 0.03, 0.035), 0.05, **{'Coat Weight': 1.0}),
     )
 
@@ -485,27 +486,79 @@ def scene_404(rig, M):
     return [t]
 
 
+LEGX = 0.0
+
+
+def lounge_chair(M):
+    """A small, soft mid-century lounge chair sized for him: a chunky upholstered base, a seat cushion,
+    padded armrests, a reclined back and four short walnut legs. Front faces -y; floor at z = 0."""
+    parts = []
+    base = rbox('ChairBase', (2.9, 2.2, 0.42), 0.16, M['bean'], segs=6); base.location = (0, 0.15, 0.36); parts.append(base)
+    cush = rbox('ChairCushion', (2.3, 1.95, 0.2), 0.09, M['bean'], segs=6); cush.location = (0, 0.05, 0.64); parts.append(cush)
+    for sx in (1, -1):
+        arm = rbox(f'ChairArm{sx}', (0.42, 2.15, 0.62), 0.18, M['bean'], segs=6); arm.location = (sx * 1.24, 0.12, 0.8); parts.append(arm)
+    back = rbox('ChairBack', (2.9, 0.46, 2.0), 0.21, M['bean'], segs=6); back.location = (0, 1.3, 1.45)
+    back.rotation_euler = (math.radians(-12), 0, 0); parts.append(back)
+    for sx in (1, -1):
+        for sy in (-1, 1):
+            leg = cyl(f'ChairLeg{sx}{sy}', 0.07, 0.2, M['wood'], verts=24, bevel=0.01)
+            leg.location = (sx * 1.25, 0.15 + sy * 0.9, 0.1); leg.rotation_euler = (math.radians(-6 * sy), math.radians(6 * sx), 0)
+            parts.append(leg)
+    for p_ in parts:
+        if p_.name.startswith('Chair') and not p_.name.startswith('ChairLeg'):
+            sub = p_.modifiers.new('S', 'SUBSURF'); sub.levels = 1; sub.render_levels = 2
+    return group('Chair', parts)
+
+
 def scene_empty(rig, M):
-    """Lounging in a beanbag: sitting up on its front, sunk in a little, leaning back into the part that
-    rises behind him, arms resting out on its sides, feet up on the front; eyes happily shut, breathing
-    slowly."""
+    """Lounging in a soft lounge chair: on the cushion, back against the reclined back, mittens resting
+    on the armrests, feet out over the front; eyes happily shut, breathing slowly."""
     act = B.new_action(rig, 'empty')
-    for f in (1, N + 1): sit(rig, f, back=-30, drop=-0.12)
-    for side, sx in (('L', 1), ('R', -1)):
-        for f in (1, N + 1): hold(rig, side=side, f=f, out=48, fwd=-14, curl=6)
-        hold(rig, 48, side, out=50, fwd=-13, curl=6)
+    for f in (1, N + 1): sit(rig, f, back=-12, drop=-0.12)
     for f in range(1, N + 2, 4): breathe(rig, f, depth=0.012)
     for f, y in ((1, 3), (48, 5), (N + 1, 3)):
-        B.joint(rig, 'head', f, x=6, y=y)                           # the head tips forward to look out
+        B.joint(rig, 'head', f, x=4, y=y)
+    chair = lounge_chair(M)
+    bind_to(rig, chair, 'root')
+    # Move the chair back until its backrest meets his back (measured from his posed shell).
+    bpy.context.scene.frame_set(1); bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get(); body = bpy.data.objects['Body']
+    me = body.evaluated_get(dg).to_mesh(); W = body.matrix_world
+    back_y = max((W @ v.co).y for v in me.vertices if 1.0 < (W @ v.co).z < 1.8)
+    body.evaluated_get(dg).to_mesh_clear()
+    back = [o for o in chair.children if o.name.startswith('ChairBack')][0]
+    face = back.location.y - 0.23                                     # the backrest's front face, roughly
+    chair.location.y += back_y - face + 0.02
+    # Feet: out in front, resting on the front of the cushion (not under the chair).
+    bpy.context.view_layer.update()
+    cush = [o for o in chair.children if o.name.startswith('ChairCushion')][0]
+    front = cush.matrix_world.translation.y - 0.97
+    pb = rig.pose.bones
+    for s_, sx in (('L', 1), ('R', -1)):
+        fb = pb[f'foot.{s_}']; head = fb.bone.head_local
+        for f in (1, N + 1):
+            B.bone_loc(fb, (sx * 0.34 - head.x + sx * LEGX, front - 0.1 - head.y, 0.78 - head.z))
+            fb.rotation_quaternion = B.wq(fb, Matrix.Rotation(math.radians(sx * 14), 3, 'Z') @ Matrix.Rotation(math.radians(-80), 3, 'X'))
+            fb.keyframe_insert('location', frame=f); fb.keyframe_insert('rotation_quaternion', frame=f)
+    # Mittens resting on the armrests.
+    bpy.context.view_layer.update()
+    for side, sx in (('L', 1), ('R', -1)):
+        arm = [o for o in chair.children if o.name == f'ChairArm{sx}'][0]
+        top = arm.matrix_world.translation + Vector((-sx * 0.04, -0.35, 0.31 + STANDOFF * 0.85))
+        x, err = solve_arm(rig, side, top, 14, 8, [20.0, 10.0, 0.0, 6.0])
+        for f in (1, 48, N + 1):
+            B.key_arm(rig, side, f, out=x[0], fwd=x[1] + (0.6 if f == 48 else 0), inward=x[2], curl=14, hug=8, slide=x[3])
+        print(f'[empty] mitten {side} to armrest: {err.length:.3f}')
     B.stash(rig, act, 'empty')
     B.use_move('empty'); bpy.context.scene.frame_set(1)
-    bag = beanbag(M); bag.location = (0, 0.0, 0.0)
-    bind_to(rig, bag, 'root')
-    bpy.context.view_layer.update()
     c = rig.matrix_world @ rig.pose.bones['body'].head
-    for part in bag.children:                         # each lobe is pressed in where he rests on it
-        dent(part, ['Body', 'Leg.L', 'Leg.R', 'Arm.L', 'Arm.R'], centre=c)
-    return [bag]
+    for part in chair.children:                                       # the upholstery gives a little
+        if part.name in ('ChairCushion', 'ChairBack'):
+            for md in list(part.modifiers):                            # dent the real shape, then smooth
+                bpy.context.view_layer.objects.active = part; bpy.ops.object.modifier_apply(modifier=md.name)
+            dent(part, ['Body', 'Leg.L', 'Leg.R'], centre=c, gap=0.01)
+            sub = part.modifiers.new('S', 'SUBSURF'); sub.levels = 1; sub.render_levels = 1
+    return [chair]
 
 
 def dent(soft, bodies, gap=0.03, frames=(1, 25, 49, 73), push=(0.0, 0.55, -0.85), centre=None):
