@@ -34,10 +34,10 @@ PROFILE = [(0, 0.0), (1, 0.12), (3, 0.34), (6, 0.47), (9, 0.55), (12, 0.62), (15
            (124.2, 0.57), (125, 0.44)]
 GROOVES = [92.5, 101.8, 110.8]
 
-FACE = dict(eye_x=0.36, eye_s=0.283, eye_w=0.175, eye_h=0.29,
-            smile_w=0.15, smile_end=0.335, smile_bot=0.375, smile_r=0.027,
-            led_x=0.0, led_s=0.563, led_r=0.085,
-            key_x=0.42, key_s=0.563, key_w=0.46, key_h=0.2)
+FACE = dict(eye_x=0.36, eye_s=0.335, eye_w=0.155, eye_h=0.255,
+            smile_w=0.125, smile_end=0.392, smile_bot=0.424, smile_r=0.024,
+            led_x=0.0, led_s=0.615, led_r=0.072,
+            key_x=0.4, key_s=0.615, key_w=0.42, key_h=0.17)
 ARM = dict(x=0.95, y=-0.12, s=0.725, rx=0.34, ry=0.35, rz=0.38)
 LEG = dict(x=0.42, y=-0.06, r=0.33, ry=0.37)
 
@@ -48,16 +48,21 @@ def pchip(xs, ys, x):
 
 
 def half_width(s):
-    xs, ys = zip(*PROFILE)
-    r = pchip(xs, ys, min(max(s, 0), 125))
-    # The dome: the measured rows fit r = 0.215 * s^0.413 closely; use the fit for a smooth top.
-    if s < 34:
-        fit = 0.215 * max(s, 0) ** 0.413
-        w = min(1.0, max(0.0, (34 - s) / 8))
-        r = fit * w + r * (1 - w)
+    """Half-width s sheet-pixels down from the top: a superellipse dome (round shoulders),
+    straight sides, and a rounded base like a moulded part, not an egg."""
+    s = min(max(s, 0), 125)
+    DOME, BASE, R = 60.0, 109.0, 0.3      # dome height (px), where the base fillet starts, fillet radius (W)
+    if s < DOME:
+        t = (DOME - s) / DOME
+        r = (1 - t ** 2.1) ** (1 / 2.1)
+    elif s < BASE:
+        r = 1.0
+    else:
+        t = min(1.0, (s - BASE) / (125 - BASE))
+        r = (1 - R) + R * math.sqrt(max(0.0, 1 - t * t))
     for g in GROOVES:
         d = s - g
-        r -= 0.042 * math.exp(-(d / 0.75) ** 2) + 0.01 * math.exp(-(d / 2.4) ** 2)
+        r -= 0.028 * math.exp(-(d / 0.6) ** 2) + 0.004 * math.exp(-(d / 2.0) ** 2)
     return r
 
 
@@ -179,12 +184,14 @@ def orient(ob, loc, nor, lift=0.0, spin=0.0):
     ob.matrix_world = m
 
 
-def capsule(name, w, h, d, segs=48):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=segs, ring_count=32, radius=1)
+def capsule(name, w, h, d, segs=48, flat=1.0):
+    """A pill w wide, h long, d deep. flat < 1 squares the depth profile off into a soft-edged slab."""
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=segs, ring_count=48, radius=1)
     ob = bpy.context.object; ob.name = name
     half = max(0.0, (h - w) / 2)
     for v in ob.data.vertices:
         x, y, z = v.co
+        z = math.copysign(abs(z) ** flat, z)
         v.co = Vector((x * w / 2, y * w / 2 + (half if y > 0 else -half if y < 0 else 0), z * d / 2))
     for p in ob.data.polygons: p.use_smooth = True
     return ob
@@ -211,21 +218,24 @@ def materials():
         p.inputs['Roughness'].default_value = rough
         for k, v in kw.items(): p.inputs[k].default_value = v
         return m, p
-    plastic, p = mat('Plastic', (0.585, 0.54, 0.515), 0.62, **{'Subsurface Weight': 0.1, 'Subsurface Scale': 0.05,
-                                                              'Specular IOR Level': 0.35})
+    plastic, p = mat('Plastic', (0.585, 0.54, 0.515), 0.66, **{'Subsurface Weight': 0.1, 'Subsurface Scale': 0.05,
+                                                              'Specular IOR Level': 0.3, 'Sheen Weight': 0.35,
+                                                              'Sheen Roughness': 0.45})
     nt = plastic.node_tree   # soft-touch: a faint noise bump
-    tex = nt.nodes.new('ShaderNodeTexNoise'); tex.inputs['Scale'].default_value = 160; tex.inputs['Detail'].default_value = 4
-    bump = nt.nodes.new('ShaderNodeBump'); bump.inputs['Strength'].default_value = 0.03; bump.inputs['Distance'].default_value = 0.002
+    tex = nt.nodes.new('ShaderNodeTexNoise'); tex.inputs['Scale'].default_value = 260; tex.inputs['Detail'].default_value = 4
+    bump = nt.nodes.new('ShaderNodeBump'); bump.inputs['Strength'].default_value = 0.06; bump.inputs['Distance'].default_value = 0.002
     nt.links.new(tex.outputs['Fac'], bump.inputs['Height']); nt.links.new(bump.outputs['Normal'], p.inputs['Normal'])
     gloss, _ = mat('Gloss', (0.012, 0.012, 0.014), 0.32, **{'Coat Weight': 0.6, 'Coat Roughness': 0.14, 'Specular IOR Level': 0.4})
     ink, _ = mat('Ink', (0.006, 0.006, 0.007), 0.5)
-    led, _ = mat('LED', (0.25, 0.95, 0.0), 0.15, **{'Emission Color': (0.4, 1.0, 0.0, 1), 'Emission Strength': 2.6})
-    ledoff, _ = mat('LEDOff', (0.32, 0.33, 0.31), 0.3)
-    keycap, _ = mat('Keycap', (0.66, 0.63, 0.6), 0.42, **{'Coat Weight': 0.15})
+    led, _ = mat('LED', (0.028, 0.451, 0.084), 0.08, **{'Emission Color': (0.028, 0.451, 0.084, 1), 'Emission Strength': 3.5,
+                                                       'Coat Weight': 1.0, 'Coat Roughness': 0.05})
+    ledoff, _ = mat('LEDOff', (0.53, 0.53, 0.52), 0.12, **{'Coat Weight': 1.0, 'Coat Roughness': 0.05})
+    keycap, _ = mat('Keycap', (0.61, 0.59, 0.56), 0.58, **{'Sheen Weight': 0.25, 'Sheen Roughness': 0.5})
     slot, _ = mat('Slot', (0.30, 0.28, 0.26), 0.6)
     shine, _ = mat('Shine', (1, 1, 1), 0.3, **{'Emission Color': (1, 1, 1, 1), 'Emission Strength': 0.6})
     pocket, _ = mat('Pocket', (0.36, 0.34, 0.32), 0.6)
-    return dict(pocket=pocket, shine=shine, plastic=plastic, gloss=gloss, ink=ink, led=led, ledoff=ledoff, keycap=keycap, slot=slot)
+    housing, _ = mat('Housing', (0.42, 0.4, 0.38), 0.55)
+    return dict(housing=housing, pocket=pocket, shine=shine, plastic=plastic, gloss=gloss, ink=ink, led=led, ledoff=ledoff, keycap=keycap, slot=slot)
 
 
 POSES = {
@@ -273,7 +283,7 @@ def build(pose='front'):
         ob.data.materials.append(mat); parts.append(ob)
         for q in ends:
             e = sphere(name + 'End', r, r, r, mat, segs=32); e.location = q
-        feats.append(dict(kind='poly', pts=[(x, zf(s_)) for x, s_ in pts], r=r + 0.02, depth=0.032))
+        feats.append(dict(kind='poly', pts=[(x, zf(s_)) for x, s_ in pts], r=r + 0.011, depth=0.02, rho=0.008))
 
     eye_s = F['eye_s'] - (0.02 if face == 'o' else 0)
     if face == 'closed':
@@ -281,41 +291,44 @@ def build(pose='front'):
             T = 1.1
             pts = [(sx * F['eye_x'] + 0.085 * math.sin(t) / math.sin(T),
                     eye_s + 0.02 + 0.045 * (math.cos(t) - math.cos(T)) / (1 - math.cos(T))) for t in np.linspace(-T, T, 28)]
-            bar('Lid', pts, 0.021, -0.02, M['gloss'])
+            bar('Lid', pts, 0.02, -0.02, M['gloss'])
     else:
         big = 1.12 if face == 'o' else 1.0
         ew, eh = F['eye_w'] * big, F['eye_h'] * big
         for sx in (-1, 1):
             # A pocket a little larger than the eye; the eye is a shallow convex lens inside it.
-            feats.append(dict(kind='ellipse', cx=sx * F['eye_x'], cz=zf(eye_s), a=ew / 2 + 0.022, b=eh / 2 + 0.022, depth=0.05))
-            e = sphere('Eye', ew / 2, eh / 2, 0.045, M['gloss'])
-            orient(e, *surface(body, sx * F['eye_x'], eye_s), lift=-0.052)
+            feats.append(dict(kind='ellipse', cx=sx * F['eye_x'], cz=zf(eye_s), a=ew / 2 + 0.011, b=eh / 2 + 0.011, depth=0.022, rho=0.008))
+            e = sphere('Eye', ew / 2, eh / 2, 0.03, M['gloss'])
+            orient(e, *surface(body, sx * F['eye_x'], eye_s), lift=-0.034)
     if face == 'smile':
         T = 1.2
         pts = [(F['smile_w'] * math.sin(t) / math.sin(T),
                 F['smile_bot'] - (F['smile_bot'] - F['smile_end']) * (1 - math.cos(t)) / (1 - math.cos(T))) for t in np.linspace(-T, T, 44)]
-        bar('Smile', pts, F['smile_r'], -0.03, M['gloss'])
+        bar('Smile', pts, F['smile_r'], -0.022, M['gloss'])
     elif face == 'o':
         feats.append(dict(kind='circle', cx=0, cz=zf(0.365), r=0.055, depth=0.04))
         m = sphere('Mouth', 0.035, 0.045, 0.03, M['gloss']); orient(m, *surface(body, 0, 0.365), lift=-0.035)
 
     led_on = P.get('led', True)
     loc, nor = surface(body, F['led_x'], F['led_s'])
-    feats.append(dict(kind='circle', cx=F['led_x'], cz=zf(F['led_s']), r=F['led_r'] + 0.022, depth=0.035))
-    led = sphere('LED', F['led_r'], F['led_r'], F['led_r'] * 0.8, M['led' if led_on else 'ledoff'], segs=48)
-    orient(led, loc, nor, lift=-0.04)
+    lr = F['led_r']
+    feats.append(dict(kind='circle', cx=F['led_x'], cz=zf(F['led_s']), r=lr + 0.016, depth=0.03, rho=0.006))
+    housing = capsule('LEDHousing', 2 * lr + 0.022, 2 * lr + 0.022, 0.03, segs=64, flat=0.35)
+    housing.data.materials.append(M['housing']); orient(housing, loc, nor, lift=-0.03); parts.append(housing)
+    lens = sphere('LEDLens', lr, lr, lr * 0.55, M['led' if led_on else 'ledoff'], segs=64)
+    orient(lens, loc, nor, lift=-0.022)
     if led_on:
-        bpy.ops.object.light_add(type='POINT', radius=0.03)
-        gl = bpy.context.object; gl.data.energy = 1.2; gl.data.color = (0.4, 1.0, 0.2)
-        gl.location = loc + nor * 0.12; parts.append(gl)
+        bpy.ops.object.light_add(type='POINT', radius=0.02)
+        gl = bpy.context.object; gl.data.energy = 0.9; gl.data.color = (0.18, 0.7, 0.32)
+        gl.location = loc + nor * 0.08; parts.append(gl)
 
-    # The key: a satin pill standing in a recessed slot.
+    # The button: a matte pill with a softly bevelled face, standing in a narrow shadow gap.
     loc, nor = surface(body, F['key_x'], F['key_s'])
     half = (F['key_w'] - F['key_h']) / 2
     feats.append(dict(kind='poly', pts=[(F['key_x'] - half, zf(F['key_s'])), (F['key_x'] + half, zf(F['key_s']))],
-                      r=F['key_h'] / 2 + 0.02, depth=0.035))
-    key = capsule('Key', F['key_h'], F['key_w'], 0.12, segs=64); key.data.materials.append(M['keycap'])
-    orient(key, loc, nor, lift=-0.005, spin=math.pi / 2); parts.append(key)
+                      r=F['key_h'] / 2 + 0.007, depth=0.035, rho=0.003))
+    key = capsule('Button', F['key_h'], F['key_w'], 0.09, segs=96, flat=0.32); key.data.materials.append(M['keycap'])
+    orient(key, loc, nor, lift=-0.012, spin=math.pi / 2); parts.append(key)
 
     carve(body, feats)
 
@@ -375,7 +388,7 @@ def stage(yaw, elev=8.0, size=700, samples=48, dark=True, lens=100, dist=13.0, t
         bpy.ops.object.light_add(type='AREA', location=loc)
         L = bpy.context.object; L.name = name; L.data.energy = energy; L.data.size = size; L.data.color = color
         L.rotation_euler = (Vector((0, 0, 1.3)) - Vector(loc)).to_track_quat('-Z', 'Y').to_euler()
-    area('Key', (-3.4, -4.6, 6.0), 1300, 4.0)
+    area('Key', (-3.4, -4.6, 6.0), 1300, 7.0)
     area('Fill', (5.0, -3.5, 2.5), 90, 6.0, (0.95, 0.97, 1.0))
     area('Rim', (3.5, 5.0, 4.0), 700, 4.0)
     area('Rim2', (-4.0, 4.0, 3.0), 400, 4.0)
