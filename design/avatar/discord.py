@@ -25,8 +25,11 @@ for f in files:
     ys, xs = np.where(a > 60)
     b = [xs.min(), ys.min(), xs.max(), ys.max()]
     box = b if box is None else [min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3])]
+# Keep the top `KEEP` of everything (the chair's base can run off the bottom: the face matters most).
+KEEP = float(sys.argv[3]) if len(sys.argv) > 3 else 1.0
+box[3] = box[1] + (box[3] - box[1]) * KEEP
 cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2 - 0.04 * (box[3] - box[1])   # a touch above centre: the face
-side = max(box[2] - box[0], box[3] - box[1]) * 1.18
+side = max(box[2] - box[0], box[3] - box[1]) * (1.18 if KEEP == 1.0 else 1.04)
 crop = (int(cx - side / 2), int(cy - side / 2), int(cx + side / 2), int(cy + side / 2))
 
 frames = []
