@@ -1075,13 +1075,14 @@ def scene_gaming(rig, M):
         pb['body'].rotation_quaternion = B.wq(pb['body'], Matrix.Rotation(math.radians(y), 3, 'Y') @ Matrix.Rotation(math.radians(-6), 3, 'X'))
         pb['body'].keyframe_insert('rotation_quaternion', frame=f)
         B.joint(rig, 'head', f, x=9 + (2 if 40 < f < 60 else 0), y=-0.6 * y)
-    # Short legs: the feet dangle over the front of the seat, swinging a little.
+    # Short legs in a deep seat: straight out in front, resting on top of the cushion (they can't
+    # reach over its front edge), feet up, kicking a little in turn.
     for s_, sx in (('L', 1), ('R', -1)):
         fb = pb[f'foot.{s_}']; head = fb.bone.head_local
         for f in range(1, N + 2, 8):
-            sw = 0.05 * math.sin(2 * math.pi * f / N + (0 if s_ == 'L' else math.pi))
-            B.bone_loc(fb, (sx * 0.06, -0.5 + sw - head.y + LEG_Y0, SEAT - 0.35 - head.z))
-            fb.rotation_quaternion = B.wq(fb, Matrix.Rotation(math.radians(-55), 3, 'X')); key(fb, f) if False else None
+            kick = 0.04 * max(0.0, math.sin(2 * math.pi * f / N + (0 if s_ == 'L' else math.pi)))
+            B.bone_loc(fb, (sx * 0.12, -1.02 - head.y, SEAT + 0.28 + kick - head.z))
+            fb.rotation_quaternion = B.wq(fb, Matrix.Rotation(math.radians(sx * 8), 3, 'Z') @ Matrix.Rotation(math.radians(-84), 3, 'X'))
             fb.keyframe_insert('location', frame=f); fb.keyframe_insert('rotation_quaternion', frame=f)
     blink((80,))
     pad = controller(M); pad.scale = (1.45, 1.45, 1.45)
@@ -1110,6 +1111,17 @@ def scene_gaming(rig, M):
     back_y = max((W @ v.co).y for v in me.vertices if 1.6 < (W @ v.co).z < 2.6)
     body.evaluated_get(dg).to_mesh_clear()
     chair.location.y += back_y - (1.25 - 0.18) + 0.03
+    # The seat gives under him and his legs, so nothing passes through it.
+    bpy.context.view_layer.update()
+    c = rig.matrix_world @ rig.pose.bones['body'].head
+    for part in chair.children:
+        if part.name.startswith('GSeat') and not part.name.startswith('GSeatBolster'):
+            for md in list(part.modifiers):
+                bpy.context.view_layer.objects.active = part; bpy.ops.object.modifier_apply(modifier=md.name)
+            fine = part.modifiers.new('Fine', 'SUBSURF'); fine.subdivision_type = 'SIMPLE'; fine.levels = 4
+            bpy.ops.object.modifier_apply(modifier='Fine')                 # enough vertices to give
+            dent(part, ['Body', 'Leg.L', 'Leg.R'], centre=c, gap=0.07, frames=tuple(range(1, N + 1, 4)))
+            sub = part.modifiers.new('S', 'SUBSURF'); sub.levels = 1; sub.render_levels = 1
     return [pad, hs, chair]
 
 
