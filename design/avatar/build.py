@@ -124,7 +124,29 @@ def carve(body, feats):
     disp = np.zeros(n); raise_ = np.zeros(n)
     front = co[:, 1] < -0.2
     for f in feats:
-        if f['kind'] == 'ellipse':
+        if 'frame' in f:
+            # Measured in the part's own frame (tangent x, tangent y, normal z), so the pocket is cut
+            # at exactly the angle the part sits at, and its floor is flat in that frame.
+            o, ex, ey, ez = f['frame']
+            d = co - o; u, v, w = d @ ex, d @ ey, d @ ez
+            if f['kind'] == 'ellipse':
+                sdf = (np.sqrt((u / f['a']) ** 2 + (v / f['b']) ** 2) - 1) * min(f['a'], f['b'])
+            elif f['kind'] == 'circle':
+                sdf = np.hypot(u, v) - f['r']
+            else:  # 'slot': a pill along local x
+                t = np.clip(u, -f['half'], f['half']); sdf = np.hypot(u - t, v) - f['r']
+            rho = f.get('rho', 0.004)
+            dd = np.minimum(0, -f['depth'] - w) * (1 - smoothstep(-rho, rho, sdf))
+            near = front & (np.abs(u) < 1) & (np.abs(v) < 1)
+            disp = np.where(near, np.minimum(disp, dd), disp)
+            continue
+        if f['kind'] == 'poly3':
+            P = np.array(f['pts']); d = np.full(n, 1e9)
+            for p0, p1 in zip(P[:-1], P[1:]):
+                vv = p1 - p0; t = np.clip(((co - p0) @ vv) / (vv @ vv), 0, 1)
+                d = np.minimum(d, np.linalg.norm(co - p0 - t[:, None] * vv, axis=1))
+            sdf = d - f['r']
+        elif f['kind'] == 'ellipse':
             k = np.sqrt(((x - f['cx']) / f['a']) ** 2 + ((z - f['cz']) / f['b']) ** 2)
             sdf = (k - 1) * min(f['a'], f['b'])
         elif f['kind'] == 'circle':
@@ -187,6 +209,14 @@ def orient(ob, loc, nor, lift=0.0, spin=0.0):
     if spin: m = m @ Matrix.Rotation(spin, 4, 'Z')
     m.translation = loc + nor * lift
     ob.matrix_world = m
+
+
+def frame(loc, nor, spin=0.0):
+    """The same axes orient() gives a part: x and y along the surface, z out of it."""
+    z = nor.normalized(); x = Vector((0, 0, 1)).cross(z).normalized(); y = z.cross(x)
+    if spin:
+        x, y = x * math.cos(spin) + y * math.sin(spin), -x * math.sin(spin) + y * math.cos(spin)
+    return tuple(np.array(a) for a in (loc, x, y, z))
 
 
 def capsule(name, w, h, d, segs=48, flat=1.0):
@@ -278,9 +308,9 @@ def build(pose='front'):
         """A graphite bar along a curve on the surface, with round ends, sitting in its groove."""
         cu = bpy.data.curves.new(name, 'CURVE'); cu.dimensions = '3D'
         sp = cu.splines.new('POLY'); sp.points.add(len(pts) - 1)
-        ends = []
+        ends = []; line = []
         for i, (x, s_) in enumerate(pts):
-            loc, nor = surface(body, x, s_); q = loc + nor * lift
+            loc, nor = surface(body, x, s_); q = loc + nor * lift; line.append(tuple(loc))
             sp.points[i].co = (q.x, q.y, q.z, 1)
             if i in (0, len(pts) - 1): ends.append(q)
         cu.bevel_depth = r; cu.bevel_resolution = 8; cu.use_fill_caps = False
@@ -288,7 +318,7 @@ def build(pose='front'):
         ob.data.materials.append(mat); parts.append(ob)
         for q in ends:
             e = sphere(name + 'End', r, r, r, mat, segs=32); e.location = q
-        feats.append(dict(kind='poly', pts=[(x, zf(s_)) for x, s_ in pts], r=r + 0.0035, depth=0.012, rho=0.003))
+        feats.append(dict(kind='poly3', pts=line, r=r + 0.0035, depth=0.012, rho=0.003))
 
     eye_s = F['eye_s'] - (0.02 if face == 'o' else 0)
     if face == 'closed':
@@ -306,23 +336,24 @@ def build(pose='front'):
             # widest outline sits on the socket floor, so the rim reads as set in, and its crown rises
             # clearly above the shell to catch a highlight.
             D = 0.016
-            feats.append(dict(kind='ellipse', cx=sx * F['eye_x'], cz=zf(eye_s), a=ew / 2 + 0.0035, b=eh / 2 + 0.0035,
-                              depth=D, rho=0.0035))
+            loc, nor = surface(body, sx * F['eye_x'], eye_s)
+            feats.append(dict(kind='ellipse', frame=frame(loc, nor), a=ew / 2 + 0.0035, b=eh / 2 + 0.0035, depth=D, rho=0.0035))
             e = sphere('Eye', ew / 2, eh / 2, ew * 0.26, M['gloss'])
-            orient(e, *surface(body, sx * F['eye_x'], eye_s), lift=-D - 0.003)
+            orient(e, loc, nor, lift=-D - 0.003)
     if face == 'smile':
         T = 1.2
         pts = [(F['smile_w'] * math.sin(t) / math.sin(T),
                 F['smile_bot'] - (F['smile_bot'] - F['smile_end']) * (1 - math.cos(t)) / (1 - math.cos(T))) for t in np.linspace(-T, T, 44)]
         bar('Smile', pts, F['smile_r'], -0.014, M['gloss'])
     elif face == 'o':
-        feats.append(dict(kind='circle', cx=0, cz=zf(0.365), r=0.055, depth=0.04))
-        m = sphere('Mouth', 0.035, 0.045, 0.03, M['gloss']); orient(m, *surface(body, 0, 0.365), lift=-0.035)
+        loc, nor = surface(body, 0, 0.365)
+        feats.append(dict(kind='circle', frame=frame(loc, nor), r=0.04, depth=0.014))
+        m = sphere('Mouth', 0.035, 0.045, 0.03, M['gloss']); orient(m, loc, nor, lift=-0.017)
 
     led_on = P.get('led', True)
     loc, nor = surface(body, F['led_x'], F['led_s'])
     lr = F['led_r']
-    feats.append(dict(kind='circle', cx=F['led_x'], cz=zf(F['led_s']), r=lr + 0.016, depth=0.03, rho=0.006))
+    feats.append(dict(kind='circle', frame=frame(loc, nor), r=lr + 0.016, depth=0.03, rho=0.006))
     housing = capsule('LEDHousing', 2 * lr + 0.022, 2 * lr + 0.022, 0.03, segs=64, flat=0.35)
     housing.data.materials.append(M['housing']); orient(housing, loc, nor, lift=-0.03); parts.append(housing)
     lens = sphere('LEDLens', lr, lr, lr * 0.55, M['led' if led_on else 'ledoff'], segs=64)
@@ -335,8 +366,7 @@ def build(pose='front'):
     # The button: a matte pill with a softly bevelled face, standing in a narrow shadow gap.
     loc, nor = surface(body, F['key_x'], F['key_s'])
     half = (F['key_w'] - F['key_h']) / 2
-    feats.append(dict(kind='poly', pts=[(F['key_x'] - half, zf(F['key_s'])), (F['key_x'] + half, zf(F['key_s']))],
-                      r=F['key_h'] / 2 + 0.007, depth=0.035, rho=0.003))
+    feats.append(dict(kind='slot', frame=frame(loc, nor), half=half, r=F['key_h'] / 2 + 0.007, depth=0.035, rho=0.003))
     key = capsule('Button', F['key_h'], F['key_w'], 0.09, segs=96, flat=0.32); key.data.materials.append(M['keycap'])
     orient(key, loc, nor, lift=-0.012, spin=math.pi / 2); parts.append(key)
 
