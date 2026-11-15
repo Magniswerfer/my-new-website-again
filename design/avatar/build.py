@@ -40,6 +40,7 @@ FACE = dict(eye_x=0.34, eye_s=0.305, eye_w=0.16, eye_h=0.264,
             key_x=0.4, key_s=0.53, key_w=0.42, key_h=0.17)
 # Arms: short plump mittens. The shoulder pivot sits at the arm's upper inner end, just inside the
 # shell near the top of the ribs; at rest the arm hangs beside the lower body, angled slightly forward.
+NECK, HIP = 0.6, 0.84     # joints: share of body height from the top
 ARM = dict(x=0.93, y=-0.12, s=0.6, length=0.76, radius=0.27, flat=0.88, root=0.12,
            out=16.0, fwd=10.0)   # rest angles (degrees): away from the body, and forward
 LEG = dict(x=0.42, y=-0.06, r=0.33, ry=0.37)
@@ -425,6 +426,14 @@ def heel_toe(tilt):
     return 0.36 * math.sin(math.radians(abs(tilt)))
 
 
+def joint(rig, name, f, x=0.0, y=0.0, z=0.0):
+    """Key a joint: x nods forward, y tilts toward +x (his left), z turns to his left."""
+    pb = rig.pose.bones[name]
+    pb.rotation_quaternion = wq(pb, Matrix.Rotation(math.radians(z), 3, 'Z') @ Matrix.Rotation(math.radians(y), 3, 'Y')
+                                @ Matrix.Rotation(math.radians(x), 3, 'X'))
+    pb.keyframe_insert('rotation_quaternion', frame=f)
+
+
 def stash(rig, act, name):
     act.use_fake_user = True
     trk = rig.animation_data.nla_tracks.new(); trk.name = name; trk.strips.new(name, 1, act); trk.mute = True
@@ -482,6 +491,12 @@ def walk(rig, legs, T=28, S=0.58, lift=0.14):
         squash_body(body, 1 + 0.025 * bob / A)          # a little squash at 'down', stretch at 'up'
         key(body, f, scale=True)
         hist.append(dict(rels))
+    for f in range(1, T + 2):
+        t = f - 1
+        sw = math.cos(2 * math.pi * (t - 7) / T); swd = math.cos(2 * math.pi * (t - 9) / T)
+        joint(rig, 'hips', f, y=-1.5 * sw, z=4 * math.sin(2 * math.pi * (t - 7) / T))
+        hc = t % (T // 2)
+        joint(rig, 'head', f, x=1.5 * math.exp(-((hc - 5) / 2.5) ** 2), y=-2 * swd)
     for f in range(1, T + 2):                        # arms swing opposite the feet, trailing by two frames
         r = hist[(f - 1 - 2) % T]
         for side in 'LR':
@@ -517,6 +532,10 @@ def jump(rig, legs):
             fb = pb[f'foot.{side}']
             bone_loc(fb, (0, 0.03 * tuck, 0.08 * tuck))
             fb.rotation_quaternion = wq(fb, Matrix.Rotation(math.radians(18 * tuck), 3, 'X')); key(fb, f)
+    for f, hx in ((1, 0), (13, 7), (16, 8), (19, -7), (23, -3), (27, 1), (31, -2), (36, 9), (40, -3), (44, 1), (48, 0)):
+        joint(rig, 'head', f, x=hx)
+    for f, px in ((1, 0), (11, -5), (14, -6), (17, 3), (21, 0), (34, -5), (38, 1), (47, 0)):
+        joint(rig, 'hips', f, x=px)
     # Arms trail: back and down in the crouch, swung up with the launch, still lifting at the apex,
     # dragging high as he falls, flopping down past rest on landing, then a small bounce.
     arms = [(1, 0, 0), (7, 4, 2), (13, -6, -28), (16, -4, -32), (20, 40, 22), (26, 62, 18), (31, 58, 10),
@@ -545,7 +564,7 @@ def foot_rest(side, yaw=0.0, at=(0.0, 0.0)):
     return (at[0] + v.x, at[1] + v.y)
 
 
-def steps(rig, legs, name, n, root, feet, shell, arms=None):
+def steps(rig, legs, name, n, root, feet, shell, arms=None, head_track=None, hips_track=None):
     """Key a stepping move frame by frame from world-space targets, so planted feet hold still in the
     world even while the root turns or travels.
       root:  [(frame, (x, y, yaw))]
@@ -577,6 +596,8 @@ def steps(rig, legs, name, n, root, feet, shell, arms=None):
         for s_ in 'LR':
             fw = smooth_track(arms[s_], f) if arms else 0.0
             key_arm(rig, s_, f, fwd=fw, out=3)
+        if head_track: joint(rig, 'head', f, *smooth_track(head_track, f))
+        if hips_track: joint(rig, 'hips', f, *smooth_track(hips_track, f))
     stash(rig, act, name)
 
 
@@ -603,7 +624,8 @@ def start_stop_turn(rig, legs, S=0.58):
                       (12, (R0[0], yL, 0, 0, -5)), (14, (R0[0], yL, 0, 0, 0)), (26, (R0[0], yL, 0, 0, 0))]},
           shell=[(1, (0.02, -0.25 * A, 1, 4)), (8, (0.03, 0.3 * A, 2, 3)), (12, (0, -0.2 * A, 0, 2)),
                  (15, (0, -0.7 * A, 0, 1)), (20, (0, 0.1 * A, 0, 0)), (26, (0, 0, 0, 0))],
-          arms={'L': [(1, -12), (14, 3), (20, -1), (26, 0)], 'R': [(1, 12), (14, -3), (20, 1), (26, 0)]})
+          arms={'L': [(1, -12), (14, 3), (20, -1), (26, 0)], 'R': [(1, 12), (14, -3), (20, 1), (26, 0)]},
+          head_track=[(1, (0, 0, 0)), (13, (0, 0, 0)), (17, (5, 0, 0)), (21, (-2, 0, 0)), (26, (0, 0, 0))])
     # Turn 90 degrees left in place: the shell starts to face the new way as the left foot steps into
     # it; weight transfers onto that foot before the right comes round; the left squares up last.
     L45, R90, L90 = foot_rest('L', 45), foot_rest('R', 90), foot_rest('L', 90)
@@ -616,7 +638,9 @@ def start_stop_turn(rig, legs, S=0.58):
                 'R': [(1, (R0[0], R0[1], 0, 0, 0)), (17, (R0[0], R0[1], 0, 0, 8)), (21, ((R0[0] + R90[0]) / 2, (R0[1] + R90[1]) / 2, 45, 0.1, 0)),
                       (26, (R90[0], R90[1], 90, 0, -6)), (27, (R90[0], R90[1], 90, 0, 0)), (36, (R90[0], R90[1], 90, 0, 0))]},
           shell=[(1, (0, 0, 0, 0)), (5, (-0.04, -0.2 * A, -3, 1)), (12, (-0.01, 0.3 * A, -1, 2)), (16, (0.04, -0.4 * A, 3, 2)),
-                 (22, (0.03, 0.3 * A, 2, 2)), (27, (0, -0.4 * A, 0, 1)), (31, (-0.015, 0, -1, 0)), (36, (0, 0, 0, 0))])
+                 (22, (0.03, 0.3 * A, 2, 2)), (27, (0, -0.4 * A, 0, 1)), (31, (-0.015, 0, -1, 0)), (36, (0, 0, 0, 0))],
+          head_track=[(1, (0, 0, 0)), (4, (1, 0, 18)), (12, (0, 2, 14)), (20, (0, -1, 12)), (27, (1, 0, -4)), (32, (0, 0, 2)), (36, (0, 0, 0))],
+          hips_track=[(1, (0, 0, 0)), (8, (0, 0, -6)), (15, (0, 1, 3)), (20, (0, 0, -6)), (27, (0, 0, 2)), (36, (0, 0, 0))])
 
 
 def animations(rig, arms, legs=None):
@@ -630,6 +654,7 @@ def animations(rig, arms, legs=None):
     key_arm(rig, 'L', 5, out=-6, curl=-4)                                 # dip first
     key_arm(rig, 'L', 13, out=128, fwd=20, inward=-6, curl=6, hug=-10, slide=14)    # up beside the head
     key_body(rig, 13, lean_y=-3.5)
+    joint(rig, 'head', 1); joint(rig, 'head', 9, y=2); joint(rig, 'head', 15, y=6, x=-2)
     swings = [(-22, 18), (16, 11), (-11, 5), (7, 0)]                      # arc, frames apart; shrinking
     f = 13
     for i, (arc, _) in enumerate(swings):
@@ -637,6 +662,7 @@ def animations(rig, arms, legs=None):
         key_arm(rig, 'L', f, out=128 + arc, fwd=20, inward=-6, curl=6, hug=-10 - arc * 0.5, slide=14)
     key_arm(rig, 'L', f + 4, out=124, fwd=18, inward=-4, curl=5, hug=-9, slide=12)
     key_body(rig, f + 4, lean_y=-2.5)
+    joint(rig, 'head', f, y=5, x=-1); joint(rig, 'head', f + 16, y=-1); joint(rig, 'head', f + 22)
     key_arm(rig, 'L', f + 14, out=-3, curl=-2, slide=-3)                            # overshoot on the way down
     key_arm(rig, 'L', f + 18); key_body(rig, f + 18)
     key_arm(rig, 'R', 4); key_arm(rig, 'R', 16, out=5, fwd=3); key_arm(rig, 'R', f + 6, out=4, fwd=2)
@@ -666,6 +692,10 @@ def animations(rig, arms, legs=None):
             sk.value = v; sk.keyframe_insert('value', frame=fr)
     if legs:
         walk(rig, legs); jump(rig, legs); start_stop_turn(rig, legs)
+    for pb in rig.pose.bones:                         # back to rest once the moves are built
+        pb.location = (0, 0, 0); pb.rotation_quaternion = (1, 0, 0, 0); pb.scale = (1, 1, 1)
+    for ob in arms + (list(legs.values()) if legs else []):
+        if ob.data.shape_keys: ob.data.shape_keys.key_blocks['squash'].value = 0
     rig.animation_data.action = None
 
 
@@ -769,6 +799,10 @@ def build(pose='front', with_anims=True):
     eb = arm_data.edit_bones
     root = eb.new('root'); root.head = (0, 0, 0); root.tail = (0, 0.4, 0)
     b = eb.new('body'); b.head = (0, 0, Z0 + 0.22); b.tail = (0, 0, ZT); b.parent = root   # pivots low, above the hips
+    # Joints in the one-piece shell: the neck sits just above the ribs and carries the dome and face;
+    # the hip sits at the bottom of the ribs and carries the base and the leg attachments.
+    hd = eb.new('head'); hd.head = (0, 0, ZT - NECK * BODY_H); hd.tail = (0, 0, ZT); hd.parent = b
+    hb_ = eb.new('hips'); hb_.head = (0, 0, ZT - HIP * BODY_H); hb_.tail = (0, 0, Z0); hb_.parent = b
     for s_, sx in (('L', 1), ('R', -1)):
         _, pv, d = made[s_]
         at = eb.new(f'attach.{s_}'); at.head = Vector((0, 0, pv.z)); at.tail = Vector((pv.x, pv.y, pv.z)); at.roll = 0
@@ -778,7 +812,7 @@ def build(pose='front', with_anims=True):
         lo = eb.new(f'arm_lower.{s_}'); lo.head = pv + d * 0.33; lo.tail = pv + d * ARM['length']; lo.parent = up
         lo.use_connect = True
         hp = Vector((sx * LEG['x'], LEG['y'], Z0 + 0.12))
-        ha = eb.new(f'hip_attach.{s_}'); ha.head = hp; ha.tail = hp + Vector((0, 0, 0.15)); ha.parent = b; ha.use_deform = False
+        ha = eb.new(f'hip_attach.{s_}'); ha.head = hp; ha.tail = hp + Vector((0, 0, 0.15)); ha.parent = hb_; ha.use_deform = False
         hb = eb.new(f'hip.{s_}'); hb.head = hp; hb.tail = Vector((hp.x, hp.y, 0.3)); hb.parent = ha
         fb = eb.new(f'foot.{s_}'); fb.head = Vector((hp.x, hp.y, 0.02)); fb.tail = Vector((hp.x, hp.y - 0.25, 0.02)); fb.parent = root
     bpy.ops.object.mode_set(mode='OBJECT')
@@ -791,8 +825,17 @@ def build(pose='front', with_anims=True):
         mw = ob.matrix_world.copy()
         ob.parent = rig; ob.parent_type = 'BONE'; ob.parent_bone = bone
         ob.matrix_world = mw
-    bind(body, 'body')
-    for o in parts: bind(o, 'body')
+    # The shell deforms with body, head and hips, blended so the ribs stay firm; the face rides the head.
+    gb, gh, gp = (body.vertex_groups.new(name=n) for n in ('body', 'head', 'hips'))
+    for v in body.data.vertices:
+        sh_ = (ZT - v.co.z) / BODY_H
+        a = min(1.0, max(0.0, (NECK + 0.07 - sh_) / 0.16)); wh = a * a * (3 - 2 * a)
+        c = min(1.0, max(0.0, (sh_ - (HIP - 0.04)) / 0.12)); wp = c * c * (3 - 2 * c)
+        wb = max(0.0, 1 - wh - wp)
+        gb.add([v.index], wb, 'REPLACE'); gh.add([v.index], wh, 'REPLACE'); gp.add([v.index], wp, 'REPLACE')
+    body.parent = rig; body.parent_type = 'OBJECT'
+    md = body.modifiers.new('Armature', 'ARMATURE'); md.object = rig
+    for o in parts: bind(o, 'head')
     for s_ in 'LR':
         lg = legs[s_]; lg.parent = rig; lg.parent_type = 'OBJECT'
         md = lg.modifiers.new('Armature', 'ARMATURE'); md.object = rig
