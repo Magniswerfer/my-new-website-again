@@ -21,7 +21,7 @@ from mathutils import Vector, Matrix, Euler
 EXPO = -0.9
 PX = 52.5                    # sheet pixels per unit
 DEPTH = 0.91                 # body depth / width
-LEG_H = 16 / PX              # visible leg below the body
+LEG_H = 27 / PX              # visible leg below the body
 BODY_H = 2.44                # body height in half-widths (height / width = 1.22)
 Z0 = LEG_H
 ZT = Z0 + BODY_H
@@ -51,9 +51,9 @@ def pchip(xs, ys, x):
 
 
 # Front outline from the body sheet: (share of height from the top, half-width).
-OUTLINE = [(0.0, 0.0), (0.006, 0.17), (0.025, 0.372), (0.05, 0.493), (0.075, 0.581), (0.1, 0.65), (0.125, 0.706),
-           (0.15, 0.753), (0.175, 0.794), (0.2, 0.827), (0.225, 0.859), (0.25, 0.883), (0.275, 0.906), (0.3, 0.926),
-           (0.325, 0.944), (0.35, 0.957), (0.375, 0.971), (0.4, 0.98), (0.425, 0.989), (0.45, 0.996), (0.5, 1.0),
+OUTLINE = [(0.0, 0.0), (0.004, 0.2), (0.015, 0.4), (0.035, 0.55), (0.06, 0.655), (0.09, 0.74), (0.12, 0.8),
+           (0.15, 0.845), (0.18, 0.88), (0.21, 0.908), (0.24, 0.93), (0.27, 0.948), (0.3, 0.962), (0.33, 0.973),
+           (0.36, 0.982), (0.4, 0.99), (0.45, 0.997), (0.5, 1.0),
            (0.6, 1.0), (0.85, 1.0), (0.875, 0.99), (0.9, 0.97), (0.925, 0.938), (0.95, 0.89), (0.97, 0.83),
            (0.986, 0.75), (0.996, 0.66), (1.0, 0.57)]   # a bullet: dome, parallel sides, tucking in below the last ridge
 
@@ -173,15 +173,32 @@ def carve(body, feats):
 
 
 def make_leg(side):
-    R, c = LEG['r'], 0.55          # radius, corner rounding as a share of the radius
-    top = Z0 + 0.45
-    rings = [(top - 0.6 * k / 20, R) for k in range(0, 20)]
+    """A short plump stub with a softly flattened sole; its root sits inside the underside of the body.
+    Two vertex groups: the hip holds the top, the foot the bottom, blended through the middle so the
+    leg bends softly between a moving body and a planted foot. A 'squash' key widens it as it compresses."""
+    R, c = LEG['r'], 0.42
+    top = Z0 + 0.42
     zc = R * c
-    for k in range(1, 24):
-        t = k / 23 * math.pi / 2
+    rings = [(top - (top - zc) * k / 24, R * (0.92 + 0.08 * math.sin(math.pi / 2 * k / 24))) for k in range(0, 25)]
+    for k in range(1, 20):
+        t = k / 19 * math.pi / 2
         rings.append((zc - zc * math.sin(t), R * ((1 - c) + c * math.cos(t))))
+    sx = 1 if side == 'L' else -1
     ob = lathe(f'Leg.{side}', rings, segs=64, sy=LEG['ry'] / R)
-    ob.location = (LEG['x'] * (1 if side == 'L' else -1), LEG['y'], 0)
+    me = ob.data
+    for v in me.vertices:
+        v.co.x += sx * LEG['x']; v.co.y += LEG['y']
+    gh = ob.vertex_groups.new(name=f'hip.{side}'); gf = ob.vertex_groups.new(name=f'foot.{side}')
+    for v in me.vertices:
+        t = min(1.0, max(0.0, (v.co.z - 0.08) / (Z0 * 0.9))); wh = t * t * (3 - 2 * t)
+        gh.add([v.index], wh, 'REPLACE'); gf.add([v.index], 1 - wh, 'REPLACE')
+    ob.shape_key_add(name='Basis')
+    sq = ob.shape_key_add(name='squash', from_mix=False)
+    cx, cy = sx * LEG['x'], LEG['y']
+    for i, v in enumerate(me.vertices):
+        k = 1.0 if v.co.z < Z0 else max(0.0, 1 - (v.co.z - Z0) / 0.2)
+        sq.data[i].co = Vector((cx + (v.co.x - cx) * (1 + 0.05 * k), cy + (v.co.y - cy) * (1 + 0.05 * k),
+                                v.co.z * (1 - 0.05 * k)))
     return ob
 
 
@@ -333,6 +350,9 @@ POSES = {
     'wave': {'anim': ('wave', 15)},
     'reach': {'anim': ('reach', 30), 'ball': True},
     'sleep': {'face': 'closed', 'led': False, 'tilt': (6, 0)},
+    'sit': {'sit': True},
+    'walk': {'anim': ('walk', 10)},
+    'jump': {'anim': ('jump', 7)},
     'surprised': {'face': 'o'},
 }
 
@@ -372,7 +392,78 @@ def key_body(rig, frame, lean_x=0.0, lean_y=0.0, bob=0.0):
     b.keyframe_insert('rotation_quaternion', frame=frame); b.keyframe_insert('location', frame=frame)
 
 
-def animations(rig, arms):
+def bone_loc(pb, v):
+    """Set a pose bone's location from an armature-space offset."""
+    pb.location = pb.bone.matrix_local.to_3x3().inverted() @ Vector(v)
+
+
+def key(pb, f, loc=True, rot=True):
+    if loc: pb.keyframe_insert('location', frame=f)
+    if rot: pb.keyframe_insert('rotation_quaternion', frame=f)
+
+
+def stash(rig, act, name):
+    act.use_fake_user = True
+    trk = rig.animation_data.nla_tracks.new(); trk.name = name; trk.strips.new(name, 1, act); trk.mute = True
+
+
+def walk(rig, legs, T=28, S=0.42, lift=0.11):
+    """A walk cycle, T frames for left + right. Each foot stands for 16 frames (fixed in the world while
+    the body travels over it) and swings for 12 in a low arc, so both feet touch during each weight
+    transfer. The body moves forward S per step, sways toward the supporting foot and bobs; the hips
+    slide a little with the swinging leg; the arms swing opposite."""
+    act = bpy.data.actions.new('walk'); rig.animation_data.action = act
+    pb = rig.pose.bones; root, body = pb['root'], pb['body']
+    STANCE, SWING = 16, 12; v = S / (T / 2); half = v * STANCE / 2
+    for f in range(1, T + 2):
+        t = f - 1
+        bone_loc(root, (0, -v * t, 0)); key(root, f, rot=False)
+        rels = {}
+        for side, off in (('L', 0), ('R', T // 2)):
+            p = (t + off) % T
+            foot, hip = pb[f'foot.{side}'], pb[f'hip_attach.{side}']
+            if p < SWING:                       # swing: a low arc forward, landing with the toe up a touch
+                u = p / SWING; e = u * u * (3 - 2 * u)
+                rel = half - 2 * half * e; z = lift * math.sin(math.pi * u)
+                tilt = 10 * math.sin(math.pi * min(1.0, u * 2)) * (u < 0.5) - 8 * max(0.0, (u - 0.6) / 0.4)
+                squash = 0.0
+            else:                               # stance: planted; settle, then roll onto the front
+                w = (p - SWING) / STANCE
+                rel = -half + 2 * half * w
+                tilt = -8 * max(0.0, 1 - w * 6) + 14 * max(0.0, (w - 0.78) / 0.22)
+                z = 0.02 * max(0.0, (w - 0.78) / 0.22)
+                squash = max(0.8 * max(0.0, 1 - abs(w - 0.08) / 0.2), 0.25 if 0.1 < w < 0.75 else 0.0)
+            rels[side] = rel
+            bone_loc(foot, (0, rel, z))
+            foot.rotation_quaternion = wq(foot, Matrix.Rotation(math.radians(tilt), 3, 'X'))
+            key(foot, f)
+            bone_loc(hip, (0, -0.35 * rel, 0)); key(hip, f, rot=False)
+            sk = legs[side].data.shape_keys.key_blocks['squash']; sk.value = squash; sk.keyframe_insert('value', frame=f)
+        sway = math.cos(2 * math.pi * (t - 20) / T)          # +1 over the left foot
+        body.rotation_quaternion = wq(body, Matrix.Rotation(math.radians(3 * sway), 3, 'Y'))
+        bone_loc(body, (0.025 * sway, 0, -0.018 * (0.5 + 0.5 * math.cos(2 * math.pi * (t - 13) / (T / 2)))))
+        key(body, f)
+        for side in 'LR':
+            key_arm(rig, side, f, fwd=11 * rels[side] / half, out=2)
+    stash(rig, act, 'walk')
+
+
+def jump(rig, legs):
+    """Compress both legs, push up together, land on both soles and settle."""
+    act = bpy.data.actions.new('jump'); rig.animation_data.action = act
+    pb = rig.pose.bones; root, body = pb['root'], pb['body']
+    keys = [(1, 0, 0, 0), (7, 0, -0.07, 0.9), (10, 0.06, 0.02, 0), (16, 0.42, 0.03, 0), (21, 0.06, 0, 0),
+            (23, 0, -0.06, 1.0), (28, 0, 0.012, 0), (32, 0, 0, 0)]
+    for f, rz, bz, sq in keys:
+        bone_loc(root, (0, 0, rz)); key(root, f, rot=False)
+        bone_loc(body, (0, 0, bz)); key(body, f, rot=False)
+        for side in 'LR':
+            sk = legs[side].data.shape_keys.key_blocks['squash']; sk.value = sq; sk.keyframe_insert('value', frame=f)
+            key_arm(rig, side, f, out=(34 if 10 <= f <= 21 else (-4 if sq else 0)), fwd=(8 if 10 <= f <= 21 else 0))
+    stash(rig, act, 'jump')
+
+
+def animations(rig, arms, legs=None):
     """Wave and reach, at 24 fps, stashed as NLA strips so the GLB carries both."""
     for pb in rig.pose.bones: pb.rotation_mode = 'QUATERNION'
     rig.animation_data_create()
@@ -417,6 +508,8 @@ def animations(rig, arms):
         sk = ob.data.shape_keys.key_blocks['squash']
         for fr, v in ((1, 0), (21, 0), (25, 0.8), (44, 0.8), (50, 0), (64, 0)):
             sk.value = v; sk.keyframe_insert('value', frame=fr)
+    if legs:
+        walk(rig, legs); jump(rig, legs)
     rig.animation_data.action = None
 
 
@@ -528,9 +621,15 @@ def build(pose='front', with_anims=True):
         up = eb.new(f'arm_upper.{s_}'); up.head = pv; up.tail = pv + d * 0.33; up.parent = sh
         lo = eb.new(f'arm_lower.{s_}'); lo.head = pv + d * 0.33; lo.tail = pv + d * ARM['length']; lo.parent = up
         lo.use_connect = True
-        l = eb.new(f'leg.{s_}'); l.head = (sx * LEG['x'], LEG['y'], Z0 + 0.2); l.tail = (sx * LEG['x'], LEG['y'], 0); l.parent = root
+        hp = Vector((sx * LEG['x'], LEG['y'], Z0 + 0.12))
+        ha = eb.new(f'hip_attach.{s_}'); ha.head = hp; ha.tail = hp + Vector((0, 0, 0.15)); ha.parent = b; ha.use_deform = False
+        hb = eb.new(f'hip.{s_}'); hb.head = hp; hb.tail = Vector((hp.x, hp.y, 0.3)); hb.parent = ha
+        fb = eb.new(f'foot.{s_}'); fb.head = Vector((hp.x, hp.y, 0.02)); fb.tail = Vector((hp.x, hp.y - 0.25, 0.02)); fb.parent = root
     bpy.ops.object.mode_set(mode='OBJECT')
     for pb in rig.pose.bones: pb.rotation_mode = 'QUATERNION'
+    for s_ in 'LR':
+        c = rig.pose.bones[f'hip.{s_}'].constraints.new('DAMPED_TRACK')
+        c.target = rig; c.subtarget = f'foot.{s_}'; c.track_axis = 'TRACK_Y'; c.influence = 0.8
 
     def bind(ob, bone):
         mw = ob.matrix_world.copy()
@@ -539,16 +638,34 @@ def build(pose='front', with_anims=True):
     bind(body, 'body')
     for o in parts: bind(o, 'body')
     for s_ in 'LR':
-        bind(legs[s_], f'leg.{s_}')
+        lg = legs[s_]; lg.parent = rig; lg.parent_type = 'OBJECT'
+        md = lg.modifiers.new('Armature', 'ARMATURE'); md.object = rig
         ob = arms[s_]; ob.parent = rig; ob.parent_type = 'OBJECT'
         md = ob.modifiers.new('Armature', 'ARMATURE'); md.object = rig
 
     if with_anims:
-        animations(rig, list(arms.values()))
+        animations(rig, list(arms.values()), legs)
     if 'anim' in P:
         name, fr = P['anim']
         rig.animation_data.action = bpy.data.actions[name]
         bpy.context.scene.frame_set(fr)
+    if P.get('sit'):
+        # Sit: body down, hips slid forward, each leg swung forward from the hip with its foot carried
+        # along (so the stub keeps its shape), feet turned a little outward.
+        pb = rig.pose.bones
+        bone_loc(pb['body'], (0, 0, -Z0 * 0.86))
+        pb['body'].rotation_quaternion = wq(pb['body'], Matrix.Rotation(math.radians(-5), 3, 'X'))
+        for s_, sx in (('L', 1), ('R', -1)):
+            rig.pose.bones[f'hip.{s_}'].constraints[0].mute = True
+            bone_loc(pb[f'hip_attach.{s_}'], (0, -0.08, 0))
+            pb[f'hip.{s_}'].rotation_quaternion = wq(pb[f'hip.{s_}'],
+                Matrix.Rotation(math.radians(sx * 14), 3, 'Z') @ Matrix.Rotation(math.radians(-78), 3, 'X'))
+        bpy.context.view_layer.update()
+        for s_ in 'LR':
+            h, f_ = pb[f'hip.{s_}'], pb[f'foot.{s_}']
+            D = h.matrix @ h.bone.matrix_local.inverted()
+            f_.matrix = D @ f_.bone.matrix_local
+            bpy.context.view_layer.update()
     if 'tilt' in P:
         pb = rig.pose.bones['body']
         pb.rotation_quaternion = wq(pb, Matrix.Rotation(math.radians(P['tilt'][0]), 3, 'X'))
